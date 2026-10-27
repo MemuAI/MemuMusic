@@ -14,7 +14,7 @@ Your library and settings are stored in `%LOCALAPPDATA%\MemuMusic`. Use `MEMUMUS
 
 yt-dlp is included and can be updated from the download settings. Optional FFmpeg is required for conversion, loudness analysis and some metadata operations. Place it on `PATH` or in the library's `bin` folder. Availability of online sources depends on the service, region and authentication.
 
-In Now Playing you can choose among lyric variants, edit them, and enable offline romanization for Japanese, Chinese or Korean. Language detection is automatic, so ambiguous characters may be read incorrectly; the original text is preserved.
+In Now Playing you can choose among lyric variants, edit them, and enable offline romanization for Japanese, Chinese or Korean. Language detection uses the full lyrics and the track title, artist, and album; when only characters shared by Japanese and Chinese remain, automatic detection can still be wrong. The original lyrics are preserved.
 
 Recommendations find similar songs on YouTube Music based on your library. Play streams an available track without adding a file to the library; downloading is a separate action.
 
