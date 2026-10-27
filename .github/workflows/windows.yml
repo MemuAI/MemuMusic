@@ -1,0 +1,78 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install development dependencies
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .venv/Scripts/python.exe -m pip install -r requirements-dev.txt
+          .venv/Scripts/python.exe -m playwright install chromium
+      - name: Test the application
+        shell: pwsh
+        run: |
+          .venv/Scripts/python.exe -m unittest discover -s tests -p test_app.py -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe tests/ui_smoke.py
+      - name: Build portable executable
+        shell: pwsh
+        run: ./build.ps1
+      - name: Test the packaged executable
+        shell: pwsh
+        run: |
+          .venv/Scripts/python.exe tools/verify_frozen.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe tests/ui_smoke.py --exe dist/MemuMusic.exe
+      - name: Include dependency source
+        shell: pwsh
+        run: |
+          .venv/Scripts/python.exe -m pip download --no-deps --no-binary=:all: --dest dist/third-party-source mutagen==1.48.1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MemuMusic-Windows
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || startsWith(github.event.head_commit.message, 'release:'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: MemuMusic-Windows
+          path: dist
+      - name: Publish preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag="v1.0.0-preview.1"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then tag="${GITHUB_REF#refs/tags/}"; fi
+          gh release create "$tag" dist/MemuMusic.exe dist/MemuMusic.exe.sha256 dist/third-party-source/* \
+            --target "$GITHUB_SHA" --title "MemuMusic 1.0.0 — Preview 1" --prerelease --notes-file release-notes.md
