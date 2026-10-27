@@ -79,10 +79,29 @@ def run():
                     page.wait_for_function("document.querySelector('#lyrics-inner').textContent.includes('nihongo')")
                     page.locator('#ly-bar [data-ly="edit"]').click()
                     area = page.locator('.mm-lyrics-paste textarea')
-                    assert '私は日本人' in area.input_value()
+                    original_text = area.input_value()
+                    assert '私は日本人' in original_text
                     page.evaluate("document.body.style.userSelect='none'; let contents=''; Object.defineProperty(navigator,'clipboard',{value:{writeText:async v=>{contents=v},readText:async()=>contents},configurable:true})")
-                    box = area.bounding_box(); page.mouse.move(box['x']+20,box['y']+23); page.mouse.down(); page.mouse.move(box['x']+95,box['y']+23,steps=8); page.mouse.up()
-                    assert area.evaluate('e => e.selectionEnd-e.selectionStart') > 0
+                    page.locator('#np').evaluate("async e => { await Promise.all(e.getAnimations().map(a => a.finished.catch(() => {}))); }")
+                    area.fill('0123456789abcdef ' * 8)
+                    area.scroll_into_view_if_needed()
+                    box = area.bounding_box()
+                    style = area.evaluate('''e => { const s = getComputedStyle(e); return {
+                      left: parseFloat(s.paddingLeft) + parseFloat(s.borderLeftWidth),
+                      right: parseFloat(s.paddingRight) + parseFloat(s.borderRightWidth),
+                      top: parseFloat(s.paddingTop) + parseFloat(s.borderTopWidth),
+                      line: parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.2,
+                      select: s.userSelect
+                    }; }''')
+                    start = (box['x'] + style['left'] + 3, box['y'] + style['top'] + style['line'] / 2)
+                    end = (box['x'] + box['width'] - style['right'] - 3, start[1])
+                    assert style['select'] == 'text', style
+                    assert page.evaluate('''([x,y]) => document.elementFromPoint(x,y)?.matches('.mm-lyrics-paste textarea')''', start), (box, style, start)
+                    assert page.evaluate('''([x,y]) => document.elementFromPoint(x,y)?.matches('.mm-lyrics-paste textarea')''', end), (box, style, end)
+                    page.mouse.move(*start); page.mouse.down(); page.mouse.move(*end, steps=12); page.mouse.up()
+                    selected = area.evaluate('e => e.value.slice(e.selectionStart,e.selectionEnd)')
+                    assert '0123456789abcdef' in selected, (box, style, start, end, selected)
+                    area.fill(original_text)
                     area.click(button='right'); page.locator('.mm-ly-edit-menu [data-action="select"]').click()
                     assert area.evaluate('e => e.selectionEnd-e.selectionStart') == len(area.input_value())
                     area.click(button='right'); page.locator('.mm-ly-edit-menu [data-action="copy"]').click()
