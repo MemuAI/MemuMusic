@@ -47,6 +47,19 @@ class Instance:
 class Native:
     def __init__(self):
         self._window = None
+        self._maximized = False
+
+    def minimize_window(self):
+        self._window.minimize()
+
+    def toggle_maximize(self):
+        if self._maximized:
+            self._window.restore()
+        else:
+            self._window.maximize()
+
+    def close_window(self):
+        self._window.destroy()
 
     def choose_folder(self):
         import webview
@@ -111,7 +124,10 @@ def run():
         except (OSError, ValueError, TypeError, AttributeError):
             width, height = 1280, 820
         native._window = webview.create_window("MemuMusic", server.url, js_api=native,
-            width=width, height=height, min_size=(720, 480), background_color="#08080b", text_select=True)
+            width=width, height=height, min_size=(720, 480), background_color="#08080b", text_select=True, frameless=True, easy_drag=False)
+
+        native._window.events.maximized += lambda: setattr(native, '_maximized', True)
+        native._window.events.restored += lambda: setattr(native, '_maximized', False)
 
         def save_window():
             try:

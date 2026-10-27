@@ -48,6 +48,13 @@
   <symbol id="i-album" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="12" cy="12" r="4"/><circle class="f" cx="12" cy="12" r="1"/></symbol>
 </svg>
 
+<header class="music-titlebar pywebview-drag-region" aria-label="MemuMusic">
+  <span class="music-titlebar-name pywebview-drag-region"><img src="/assets/icon.svg" alt="">MemuMusic</span>
+  <span class="music-titlebar-drag pywebview-drag-region"></span>
+  <button type="button" data-window="minimize" aria-label="Minimize" title="Minimize">&#x2212;</button>
+  <button type="button" data-window="maximize" aria-label="Maximize or restore" title="Maximize or restore">&#x25a1;</button>
+  <button type="button" data-window="close" aria-label="Close" title="Close">&#x00d7;</button>
+</header>
 <div class="mm" id="app" data-view="home">
   <canvas class="mm-ambient" id="ambient" aria-hidden="true"></canvas>
   <img class="mm-coverbg" id="coverbg" alt="" aria-hidden="true">
@@ -79,8 +86,8 @@
     <div class="mm-bar-track">
       <button type="button" class="mm-bar-cover" id="bar-cover" data-i18n-title="np.open" data-i18n-aria-label="np.open"><img alt="" id="bar-img"><svg class="mm-bar-expand"><use href="#i-expand"/></svg></button>
       <div class="mm-bar-meta">
-        <b id="bar-title" data-i18n="player.idle"></b>
-        <span id="bar-artist" data-i18n="player.idle_hint"></span>
+        <b id="bar-title"></b>
+        <span id="bar-artist"></span>
       </div>
       <button type="button" class="mm-icon mm-like" id="bar-like" data-i18n-title="like" data-i18n-aria-label="like"><svg><use href="#i-heart"/></svg></button>
     </div>

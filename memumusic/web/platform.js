@@ -70,7 +70,22 @@ const App = (() => {
 })();
 
 window.addEventListener("DOMContentLoaded", () => {
+  const labelWindowButtons = () => {
+    const labels = App.lang === 'ru' ? {minimize:'Свернуть', maximize:'Развернуть или восстановить', close:'Закрыть'} : {minimize:'Minimize', maximize:'Maximize or restore', close:'Close'};
+    document.querySelectorAll('[data-window]').forEach(button => { button.title = labels[button.dataset.window]; button.setAttribute('aria-label', button.title); });
+  };
+  labelWindowButtons(); App.onLanguage(labelWindowButtons);
+  document.querySelector('.music-titlebar')?.addEventListener('click', event => {
+    const action = event.target.closest('[data-window]')?.dataset.window;
+    const api = window.pywebview?.api;
+    if (action === 'minimize') api?.minimize_window();
+    if (action === 'maximize') api?.toggle_maximize();
+    if (action === 'close') api?.close_window();
+  });
+  document.querySelector('.music-titlebar')?.addEventListener('dblclick', event => {
+    if (!event.target.closest('button')) window.pywebview?.api?.toggle_maximize();
+  });
   document.addEventListener("keydown", event => {
-    if (event.code === "F11" && window.pywebview?.api) { event.preventDefault(); window.pywebview.api.toggle_fullscreen(); }
+    if (event.code === "F11" && window.pywebview?.api) { event.preventDefault(); document.documentElement.classList.toggle('music-fullscreen'); window.pywebview.api.toggle_fullscreen(); }
   });
 });

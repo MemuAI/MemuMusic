@@ -133,6 +133,11 @@ def create_app(session: str | None = None, activate=None, close_window=None) -> 
     async def stream(track_id: str, request: Request, t: str = ""):
         return await asyncio.to_thread(api.stream_track, track_id, t, request.headers.get("range", ""))
 
+    @app.api_route("/api/music/online-audio/{token}", methods=["GET", "HEAD"])
+    async def online_audio_stream(token: str, request: Request):
+        from .music import online_audio
+        return await online_audio.stream(token, request)
+
     @app.api_route("/api/music/cover/{track_id}", methods=["GET", "HEAD"])
     async def cover(track_id: str, t: str = ""):
         return await asyncio.to_thread(api.cover_image, track_id, t)

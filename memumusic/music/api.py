@@ -280,6 +280,9 @@ def _extra_op(lib, op: str, args: Dict[str, Any], base: str) -> Any:
     return _NO_OP
 
 def _online_op(lib, op: str, args: Dict[str, Any], base: str) -> Any:
+    if op == "online.stream":
+        from . import online_audio
+        return online_audio.resolve(str(args.get("url") or ""), base, "/api/music/online-audio")
     def thumbs(item: Dict[str, Any]) -> Dict[str, Any]:
         if args.get("proxy_thumbs", True):
             for key in ("thumb", "cover"):
@@ -311,7 +314,7 @@ OPS = ("library.list", "library.get", "library.update", "library.delete", "libra
        "playlist.cover", "playlist.preview", "playlist.export", "playlist.import", "playlist.save_online")
 R39_OPS = ("artist.rename", "artist.image", "artist.image_search", "artist.image_auto", "artist.bio", "album.update",
            "playlist.reorder", "playlists.reorder")
-R41_OPS = ("online.search", "online.details", "online.related", "online.lyrics")
+R41_OPS = ("online.search", "online.details", "online.related", "online.lyrics", "online.stream")
 OPS = OPS + R39_OPS + R41_OPS
 
 async def call_async(op: str, args: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Any:

@@ -53,6 +53,7 @@ function savePrefs() { try { App.save({ prefs: S.prefs }); } catch (e) {  } }
 /* @include:feat-settings.js */
 /* @include:feat-extra.js */
 /* @include:feat-online.js */
+/* @include:feat-recommendations.js */
 /* @include:feat-lib.js */
 /* @include:updates.js */
 
@@ -131,7 +132,7 @@ function applyPalette(track) {
   const colors = fromCover ? paletteFor(track) : Theme.accents();
   const bg = Theme.paint(colors);
   if (ambient) ambient.setColors(colors, bg);
-  NP.setColors(fromCover ? colors : paletteFor(track || { id: "memu" }));
+  NP.setColors(colors);
   Theme.coverBg(track);
   if (track && track.cover && !track.accent) extractPalette(track.cover).then((c) => {
     if (!c) return;
@@ -231,7 +232,7 @@ function updateBar() {
   const img = $("#bar-img");
   if (tr) { img.dataset.fb = coverArt(tr.id, "", tr.title); img.src = tr.cover || img.dataset.fb; } else img.removeAttribute("src");
   const like = $("#bar-like");
-  like.hidden = !tr; like.dataset.like = tr ? tr.id : ""; like.setAttribute("aria-pressed", String(!!(tr && tr.liked)));
+  like.hidden = !tr || !!tr.online_url; like.dataset.like = tr ? tr.id : ""; like.setAttribute("aria-pressed", String(!!(tr && tr.liked)));
 }
 function updatePlayButtons() {
   const playing = Player.st.playing;

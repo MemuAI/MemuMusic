@@ -83,6 +83,10 @@ def main():
                 page.evaluate("async id => { const tr = await MemuMusic.API.call('library.list'); MemuMusic.Player.playList(tr.tracks, id, 'Test'); MemuMusic.NP().open(); }", tid)
                 page.wait_for_function("MemuMusic.Player.times().cur > .1")
                 page.evaluate("MemuMusic.Player.pause()")
+                assert page.locator('#bar-title').inner_text() == 'First'
+                assert page.locator('#ly-bar [data-ly="roman"]').count() == 0
+                page.evaluate("MemuMusic.Theme.set('accent', '#1fb2ff')")
+                assert page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--tint').trim()") == '#1fb2ff'
                 try:
                     page.locator('#ly-bar [data-ly="sync"]').wait_for(timeout=18000)
                 except Exception:
@@ -135,6 +139,17 @@ def main():
                 if not args.module_json:
                     assert page.locator('.mm-brand').inner_text() == 'MemuMusic'
                     assert page.locator('.mm-desktop-tools').count() == 0
+                    page.evaluate('''() => { const old=MemuMusic.API.soft; MemuMusic.API.soft=async (op,args,fallback)=>{
+                      if(op==='online.search') return {results:[{url:'https://music.youtube.com/watch?v=abc',title:'First',artist:'Example',source:'ytmusic'}]};
+                      if(op==='online.related') return [{id:'x',url:'https://music.youtube.com/watch?v=xyz',title:'New track',artist:'Other',source:'ytmusic',tags:[]}];
+                      return old(op,args,fallback);
+                    }; }''')
+                    page.locator('#nav [data-go="recommendations"]').click()
+                    page.locator('[data-rec-run]').click()
+                    page.wait_for_function("document.querySelector('[data-rec-results]')?.textContent.includes('New track')")
+                    page.locator('#nav [data-go="home"]').click()
+                    page.locator('#nav [data-go="recommendations"]').click()
+                    assert 'New track' in page.locator('[data-rec-results]').inner_text()
                     page.locator('#nav [data-go="settings"]').click()
                     page.locator('[data-stab="updates"]').click()
                     page.locator('[data-update-action="check"]').wait_for()

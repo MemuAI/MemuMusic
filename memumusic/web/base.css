@@ -27,6 +27,18 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
+.music-titlebar { position: fixed; z-index: 100; inset: 0 0 auto; height: 38px; display: flex; align-items: center; background: var(--mm-surface, #121217); color: var(--mm-text, #f4f3f7); border-bottom: 1px solid var(--mm-line, transparent); user-select: none; }
+.music-titlebar-name { display: flex; align-items: center; gap: 8px; padding-left: 14px; font-size: 12px; font-weight: 650; }
+.music-titlebar-name img { width: 18px; height: 18px; }
+.music-titlebar-drag { flex: 1; height: 100%; }
+.music-titlebar button { height: 100%; width: 46px; border: 0; background: transparent; color: inherit; font: 16px var(--sans); cursor: pointer; }
+.music-titlebar button:hover { background: var(--mm-hover, #7773); }
+.music-titlebar button:focus-visible { outline: 2px solid var(--tint, currentColor); outline-offset: -3px; }
+.music-titlebar button[data-window="close"]:hover { background: #c42b39; color: white; }
+html:not(.music-fullscreen) .mm { top: 38px; }
+html:not(.music-fullscreen) .mm-np { top: 38px; }
+html:not(.music-fullscreen) .mm-drawer { top: 50px; }
+html.music-fullscreen .music-titlebar { display: none; }
 [hidden] { display: none !important; }
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }

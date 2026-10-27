@@ -3,7 +3,7 @@
 const NP = (() => {
   const el = $("#np");
   let bg = null, viz = null, lyrics = null, lyricIdx = -2, lyricToken = 0, manual = 0, manualTimer = 0, tab = "lyrics", closing = 0;
-  let wordIdx = -1, tapSync = false, editing = false, roman = false, romanLanguage = "auto", romanToken = 0;
+  let wordIdx = -1, tapSync = false, editing = false, roman = false, romanToken = 0;
   const offsetTimers = new Map();
 
   let timing = null, lineNodes = [], gapNodes = new Map(), wordSpans = [], gapKey = "", gapEnd = false, syncShown = "";
@@ -134,7 +134,7 @@ const NP = (() => {
       durDiff: +(res && res.duration_diff) || 0 };
     lyrics.original = { synced: lyrics.synced, plain: lyrics.plain };
     if (!editing) renderLyrics();
-    if (roman && (lyrics.synced || lyrics.plain)) applyRoman();
+    if (roman && hasRomanizable(lyrics)) applyRoman();
   }
 
   async function applyRoman() {
@@ -142,7 +142,7 @@ const NP = (() => {
     if (!current) return;
     if (!roman) { current.synced = current.original.synced; current.plain = current.original.plain; renderLyrics(true); refreshRomanBar(); return; }
     try {
-      const res = await API.call("lyrics.romanize", { id: current.id, language: romanLanguage });
+      const res = await API.call("lyrics.romanize", { id: current.id, language: "auto" });
       if (token !== romanToken || lyrics !== current || !roman) return;
       current.synced = res.synced; current.plain = res.plain; renderLyrics(true); refreshRomanBar();
     } catch (error) {
@@ -160,6 +160,11 @@ const NP = (() => {
     if (label && lyrics) label.textContent = lyrics.synced ? (lyrics.synced.some((r) => r[2]) ? t("lyrics.words") : t("lyrics.synced")) : t("lyrics.plain");
   }
 
+  function hasRomanizable(value) {
+    const original = value && (value.original || value);
+    return !!original && /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7a3]/.test((original.plain || "") + "\n" + (original.synced || []).map(row => row[1] || "").join("\n"));
+  }
+
   function renderBar() {
     const bar = $("#ly-bar");
     if (!lyrics || !Player.current() || tab !== "lyrics" || editing) { bar.hidden = true; return; }
@@ -170,7 +175,7 @@ const NP = (() => {
     bar.innerHTML = `<button type="button" class="mm-ly-src" data-ly="alts" aria-haspopup="menu" title="${esc(t("lyrics.variants"))}"><span>${esc(lyrics.name || lyrics.source || "—")}</span><em>${esc(kind)}</em><svg><use href="#i-down"/></svg></button>
       ${lyrics.synced ? `<span class="mm-ly-off" role="group" aria-label="${esc(t("lyrics.offset"))}"><button type="button" data-ly="off-" title="${esc(t("lyrics.earlier"))}" aria-keyshortcuts="[">−</button><button type="button" class="mm-ly-reset" data-ly="off-reset" title="${esc(t("lyrics.offset_reset"))}" aria-label="${esc(t("lyrics.offset_reset"))}">${offText} ${esc(t("lyrics.sec"))}</button><button type="button" data-ly="off+" title="${esc(t("lyrics.later"))}" aria-keyshortcuts="]">+</button></span>` : ""}
       ${lyrics.synced && syncMode() !== "off" ? `<button type="button" class="mm-ly-sync" data-ly="sync" aria-pressed="${syncMode() === "line"}" title="${esc(t(syncMode() === "line" ? "lyrics.switch_chars" : "lyrics.switch_lines"))}">${icon("lyrics")}<span>${esc(t(syncMode() === "line" ? "lyrics.mode_lines" : "lyrics.mode_chars"))}</span></button>` : ""}
-      ${lyrics.synced || lyrics.plain ? `<button type="button" class="mm-ly-sync" data-ly="roman" aria-pressed="${roman}" title="${esc(t("lyrics.roman_hint"))}">Aa <span>${esc(t("lyrics.roman"))}</span></button>${roman ? `<select class="mm-ly-language" data-lylang aria-label="${esc(t("lyrics.roman_language"))}">${[["auto", "lyrics.roman_auto"], ["ja", "lyrics.roman_ja"], ["zh", "lyrics.roman_zh"], ["ko", "lyrics.roman_ko"]].map(([v, label]) => `<option value="${v}" ${romanLanguage === v ? "selected" : ""}>${esc(t(label))}</option>`).join("")}</select>` : ""}` : ""}
+      ${hasRomanizable(lyrics) ? `<button type="button" class="mm-ly-sync" data-ly="roman" aria-pressed="${roman}" title="${esc(t("lyrics.roman_hint"))}">Aa <span>${esc(t("lyrics.roman"))}</span></button>` : ""}
       ${lyrics.synced ? `<button type="button" class="mm-ly-tap${tapSync ? " on" : ""}" data-ly="tap" aria-pressed="${tapSync}" title="${esc(t("lyrics.tap_hint"))}">${icon("target")}<span>${esc(tapSync ? t("lyrics.tap_now") : t("lyrics.tap"))}</span></button>` : ""}
       <span class="mm-grow"></span>
       ${lyrics.synced && lyrics.durDiff > 2 ? `<span class="mm-ly-warn" title="${esc(t("lyrics.dur_hint", { n: Math.round(lyrics.durDiff) }))}">${esc(t("lyrics.dur", { n: Math.round(lyrics.durDiff) }))}</span>` : ""}
@@ -407,7 +412,6 @@ const NP = (() => {
     else if (kind === "tap") { tapSync = !tapSync; renderBar(); if (tapSync) toast(t("lyrics.tap_hint")); }
     else if (kind === "edit") pasteForm(editText());
   });
-  $("#ly-bar").addEventListener("change", (e) => { if (e.target.matches("[data-lylang]")) { romanLanguage = e.target.value; applyRoman(); } });
   $("#lyrics").addEventListener("wheel", (e) => {
     if (!lyrics || !lyrics.synced || syncShown === "off" || e.target.closest(".mm-lyrics-paste")) return;
     e.preventDefault(); manual -= e.deltaY; positionLyrics();

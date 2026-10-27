@@ -62,18 +62,19 @@ def run():
                       const original = MemuMusic.API.call;
                       MemuMusic.API.call = async (op, args) => {
                         const result = await original(op, args);
-                        if (op === 'lyrics.romanize' && args.language === 'ja' && !window.__heldRoman) {
+                        if (op === 'lyrics.romanize' && args.language === 'auto' && !window.__heldRoman) {
                           window.__heldRoman = true;
                           await new Promise(resolve => { window.__resumeRoman = resolve; });
                         }
                         return result;
                       };
                     }''')
-                    page.locator('[data-lylang]').select_option('ja')
+                    page.locator('#ly-bar [data-ly="roman"]').click()
+                    page.locator('#ly-bar [data-ly="roman"]').click()
                     page.wait_for_function('window.__heldRoman === true')
                     page.locator('#ly-bar [data-ly="alts"]').click()
                     page.evaluate('window.__resumeRoman()')
-                    page.wait_for_function("document.querySelector('#lyrics-inner').textContent.includes('你好')")
+                    page.wait_for_function("document.querySelector('#lyrics-inner').textContent.includes('ni hao')")
                     assert page.locator('#ly-bar [data-ly="pick"][data-i="0"]').is_visible()
                     page.locator('#ly-bar [data-ly="pick"][data-i="0"]').click()
                     page.wait_for_function("document.querySelector('#lyrics-inner').textContent.includes('nihongo')")
