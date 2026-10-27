@@ -73,6 +73,10 @@ class Native:
             self._window.show()
             self._window.restore()
 
+    def close_for_update(self):
+        if self._window:
+            self._window.destroy()
+
 
 def activate_existing() -> bool:
     try:
@@ -98,7 +102,7 @@ def run():
     native = Native()
     server = None
     try:
-        server = LocalServer(activate=native.activate).start()
+        server = LocalServer(activate=native.activate, close_window=native.close_for_update).start()
         save_json(data_dir() / "runtime.json", {"port": server.port, "session": server.session, "pid": os.getpid()}, backup=False)
         try:
             geometry = json.loads((data_dir() / "window.json").read_text(encoding="utf-8"))
@@ -107,7 +111,7 @@ def run():
         except (OSError, ValueError, TypeError, AttributeError):
             width, height = 1280, 820
         native._window = webview.create_window("MemuMusic", server.url, js_api=native,
-            width=width, height=height, min_size=(720, 480), background_color="#08080b", text_select=False)
+            width=width, height=height, min_size=(720, 480), background_color="#08080b", text_select=True)
 
         def save_window():
             try:

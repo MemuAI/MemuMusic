@@ -111,6 +111,8 @@ def call(op: str, args: Optional[Dict[str, Any]] = None, *, base: str = "", lang
     if op == "lyrics.choose":
         return lyrics.choose(lib, str(args.get("id", "")), None if args.get("index") is None else int(args["index"]),
                              1 if args.get("next") else 0)
+    if op == "lyrics.romanize":
+        return lyrics.romanize(lib, str(args.get("id", "")), str(args.get("language") or "auto"))
     if op == "lyrics.offset":
         return lyrics.set_offset(lib, str(args.get("id", "")), float(args.get("offset") or 0))
     if op == "lyrics.set":
@@ -301,7 +303,7 @@ OPS = ("library.list", "library.get", "library.update", "library.delete", "libra
        "library.stats", "library.history", "artists.list", "albums.list", "artist.get", "album.get", "playlists.list",
        "playlist.get", "playlist.create", "playlist.update", "playlist.delete", "detect", "download.start",
        "download.jobs", "download.cancel", "download.retry", "download.clear", "import.folder", "search.online",
-       "lyrics.get", "lyrics.set", "lyrics.choose", "lyrics.offset", "settings.get", "settings.set", "tools.status", "tools.update", "stream_url", "cover_url",
+       "lyrics.get", "lyrics.set", "lyrics.choose", "lyrics.romanize", "lyrics.offset", "settings.get", "settings.set", "tools.status", "tools.update", "stream_url", "cover_url",
        "player.state", "player.update", "player.command", "player.wait",
 
        "library.update_many", "library.genres", "library.folders", "library.duplicates", "library.radio", "library.reveal",

@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,9 +30,11 @@ jobs:
       - name: Test the application
         shell: pwsh
         run: |
-          .venv/Scripts/python.exe -m unittest discover -s tests -p test_app.py -v
+          .venv/Scripts/python.exe -m unittest discover -s tests -p 'test_*.py' -v
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           .venv/Scripts/python.exe tests/ui_smoke.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe tests/lyrics_ui.py
       - name: Build portable executable
         shell: pwsh
         run: ./build.ps1
@@ -42,10 +44,24 @@ jobs:
           .venv/Scripts/python.exe tools/verify_frozen.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           .venv/Scripts/python.exe tests/ui_smoke.py --exe dist/MemuMusic.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe tests/lyrics_ui.py dist/MemuMusic.exe
+      - name: Build and test Windows installer
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe") -and -not (Get-Command ISCC.exe -ErrorAction SilentlyContinue)) {
+            choco install innosetup --no-progress -y
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          ./build-installer.ps1 -TestBuild
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe -m unittest discover -s tests -p test_installer.py -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./build-installer.ps1
       - name: Include dependency source
         shell: pwsh
         run: |
-          .venv/Scripts/python.exe -m pip download --no-deps --no-binary=:all: --dest dist/third-party-source mutagen==1.48.1
+          .venv/Scripts/python.exe -m pip download --no-deps --no-binary=mutagen,pykakasi,korean-romanizer --dest dist/third-party-source mutagen==1.48.1 pykakasi==2.3.0 korean-romanizer==0.25.0
       - uses: actions/upload-artifact@v4
         with:
           name: MemuMusic-Windows
@@ -72,7 +88,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          tag="v1.0.0-preview.1"
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then tag="${GITHUB_REF#refs/tags/}"; fi
-          gh release create "$tag" dist/MemuMusic.exe dist/MemuMusic.exe.sha256 dist/third-party-source/* \
-            --target "$GITHUB_SHA" --title "MemuMusic 1.0.0 — Preview 1" --prerelease --notes-file release-notes.md
+          tag="v1.0.0-preview.2"
+          if [[ "$GITHUB_REF" == refs/tags/* && "${GITHUB_REF#refs/tags/}" != "$tag" ]]; then
+            echo "Unexpected release tag" >&2; exit 1
+          fi
+          gh release create "$tag" dist/MemuMusic-Setup.exe dist/MemuMusic-Setup.exe.sha256 \
+            dist/MemuMusic.exe dist/MemuMusic.exe.sha256 dist/third-party-source/* \
+            --target "$GITHUB_SHA" --title "MemuMusic 1.0.0 — Preview 2" --prerelease --notes-file release-notes.md

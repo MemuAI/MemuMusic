@@ -19,6 +19,7 @@ import uvicorn
 from . import __version__, storage
 from .music import api
 from .paths import data_dir, web_dir
+from .updater_routes import register_update_routes
 
 log = logging.getLogger(__name__)
 COOKIE = "memumusic_session"
@@ -51,7 +52,7 @@ def save_ui(patch: dict) -> dict:
     return storage.mutate_json(data_dir() / "ui-state.json", {}, update)
 
 
-def create_app(session: str | None = None, activate=None) -> FastAPI:
+def create_app(session: str | None = None, activate=None, close_window=None) -> FastAPI:
     session = session or secrets.token_urlsafe(32)
     app = FastAPI(title="MemuMusic", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
@@ -140,12 +141,13 @@ def create_app(session: str | None = None, activate=None) -> FastAPI:
     async def thumbnail(u: str = "", t: str = ""):
         return await asyncio.to_thread(api.thumb_image, u, t)
 
+    register_update_routes(app, close_window=close_window)
     app.mount("/assets", StaticFiles(directory=web_dir()), name="assets")
     return app
 
 
 class LocalServer:
-    def __init__(self, port: int = 0, activate=None):
+    def __init__(self, port: int = 0, activate=None, close_window=None):
         self.session = secrets.token_urlsafe(32)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
@@ -153,7 +155,7 @@ class LocalServer:
         self.socket.bind(("127.0.0.1", port))
         self.port = self.socket.getsockname()[1]
         self.url = f"http://127.0.0.1:{self.port}"
-        self.app = create_app(self.session, activate)
+        self.app = create_app(self.session, activate, close_window)
         self.server = uvicorn.Server(uvicorn.Config(self.app, host="127.0.0.1", port=self.port,
                                                    log_level="warning", log_config=None, access_log=False,
                                                    loop="asyncio", http="h11", lifespan="on", ws="none", timeout_graceful_shutdown=2))

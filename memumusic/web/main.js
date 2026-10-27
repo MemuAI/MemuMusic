@@ -54,6 +54,7 @@ function savePrefs() { try { App.save({ prefs: S.prefs }); } catch (e) {  } }
 /* @include:feat-extra.js */
 /* @include:feat-online.js */
 /* @include:feat-lib.js */
+/* @include:updates.js */
 
 
 async function loadLibrary() {

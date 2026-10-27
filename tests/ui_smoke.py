@@ -23,6 +23,9 @@ def main():
     with tempfile.TemporaryDirectory() as temp:
         work = Path(temp)
         ready = work / "ready.txt"
+        update_state = work / 'data' / 'updates' / 'state.json'
+        update_state.parent.mkdir(parents=True)
+        update_state.write_text(json.dumps({'config': {'enabled': False, 'auto_download': False}}), encoding='utf-8')
         cmd = [str(args.exe)] if args.exe else [sys.executable, "-m", "memumusic"]
         process = subprocess.Popen(cmd + ["--serve", "--data-dir", str(work / "data"), "--ready-file", str(ready)], cwd=root,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -129,8 +132,41 @@ def main():
                 for name in ('library', 'playlists', 'download', 'stats', 'settings', 'home'):
                     page.locator(f'#nav [data-go="{name}"]').click()
                     page.wait_for_timeout(80)
-                page.select_option('#app-language', 'en')
+                if not args.module_json:
+                    assert page.locator('.mm-brand').inner_text() == 'MemuMusic'
+                    assert page.locator('.mm-desktop-tools').count() == 0
+                    page.locator('#nav [data-go="settings"]').click()
+                    page.locator('[data-stab="updates"]').click()
+                    page.locator('[data-update-action="check"]').wait_for()
+                    status = client.get('/api/updates/status')
+                    status.raise_for_status()
+                    assert status.json()['config']['enabled'] is False
+                    assert status.json()['last_checked'] == 0
+                    for width, height in ((720, 480), (1280, 820), (1920, 1080)):
+                        page.set_viewport_size({'width': width, 'height': height})
+                        for selector in ('[data-stab="updates"]', '[data-update-action="check"]', '[data-update-config="interval_hours"]'):
+                            box = page.locator(selector).bounding_box()
+                            assert box and box['width'] > 0 and box['x'] >= 0 and box['x'] + box['width'] <= width + 1, (selector, width, box)
+                        page.screenshot(path=str(root / 'build' / f'updates-{width}.png'))
+                    page.set_viewport_size({'width': 1280, 'height': 820})
+                    page.locator('[data-update-config="interval_hours"]').select_option('6')
+                    page.wait_for_function('''() => fetch('/api/updates/status').then(r => r.json()).then(s => s.config.interval_hours === 6)''')
+                    page.locator('[data-stab="library"]').click()
+                    page.evaluate('''path => { window.pywebview = {api: {
+                      choose_folder: async () => path,
+                      choose_files: async () => [path + '\\\\Example - First.wav']
+                    }}; }''', str(work))
+                    page.locator('#imp-browse').click()
+                    assert page.locator('#imp-dir').input_value() == str(work)
+                    with page.expect_response(lambda response: response.url.endswith('/api/music/call') and response.request.post_data_json.get('op') == 'import.files') as imported:
+                        page.locator('#add-files').click()
+                    assert len(imported.value.json()['result']['tracks']) == 1
+                    page.locator('[data-stab="appearance"]').click()
+                    page.locator('[data-app-language="en"]').click()
+                else:
+                    page.evaluate("App.setLanguage('en')")
                 page.wait_for_function("document.documentElement.lang === 'en'")
+                page.wait_for_function("document.querySelector('#nav [data-go=search] span').textContent === 'Search'")
                 page.wait_for_timeout(500)
                 assert '[object Object]' not in page.inner_text('body')
                 assert page.evaluate("document.getElementById('app').scrollTop === 0 && Math.abs(document.getElementById('bar').getBoundingClientRect().bottom - innerHeight) < 1")

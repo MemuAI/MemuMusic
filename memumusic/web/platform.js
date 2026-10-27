@@ -70,30 +70,6 @@ const App = (() => {
 })();
 
 window.addEventListener("DOMContentLoaded", () => {
-  const lang = document.getElementById("app-language");
-  lang.value = App.lang;
-  lang.addEventListener("change", () => App.setLanguage(lang.value));
-  const picker = document.getElementById("audio-files");
-  picker.addEventListener("change", () => { importFiles([...picker.files]); picker.value = ""; });
-  document.getElementById("add-files").addEventListener("click", async () => {
-    if (!window.pywebview?.api) return picker.click();
-    const paths = await window.pywebview.api.choose_files();
-    if (!paths.length) return;
-    try {
-      const result = await window.MemuMusic.API.call("import.files", { paths });
-      await window.MemuMusic.refresh();
-      toast(result.failed.length ? App.t("app.import_partial", { n: result.tracks.length, failed: result.failed.length }) : App.t("app.imported", { n: result.tracks.length }));
-    } catch (error) { toast(String(error.message || error)); }
-  });
-  document.getElementById("add-folder").addEventListener("click", async () => {
-    if (!window.pywebview?.api) { window.MemuMusic.go("settings", { tab: "library" }); return; }
-    const path = await window.pywebview.api.choose_folder();
-    if (!path) return;
-    try {
-      await window.MemuMusic.API.call("import.folder", { path });
-      window.MemuMusic.go("download"); window.MemuMusic.pollJobs();
-    } catch (error) { toast(String(error.message || error)); }
-  });
   document.addEventListener("keydown", event => {
     if (event.code === "F11" && window.pywebview?.api) { event.preventDefault(); window.pywebview.api.toggle_fullscreen(); }
   });

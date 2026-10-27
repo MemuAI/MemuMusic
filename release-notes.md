@@ -1,31 +1,27 @@
-## MemuMusic 1.0.0 — Preview 1
+## MemuMusic 1.0.0 — Preview 2
 
-Первый тестовый выпуск самостоятельного музыкального приложения для Windows.
+Второй тестовый выпуск самостоятельного музыкального плеера для Windows.
 
-- Локальная медиатека, альбомы, исполнители, избранное, обычные и умные плейлисты.
-- Онлайн-поиск и загрузки через yt-dlp, импорт файлов и папок, очередь с отменой и повтором.
-- Эквалайзер, кроссфейд, нормализация громкости, визуализатор и таймер сна.
-- Синхронные тексты с переключателем «По строкам / По символам» прямо в режиме «Сейчас играет».
-- Редактор текста доступен и после сохранения короткого или пустого текста. Ошибка сохранения не удаляет черновик.
-- Сдвиг текста можно сбросить точно на ноль нажатием на его значение.
-- Редактирование тегов и обложек, история и статистика, темы оформления, русский и английский языки.
-- Собственное хранилище данных в `%LOCALAPPDATA%\MemuMusic`.
+- Интерфейс приведён к оформлению и расположению элементов музыкального модуля. Язык и импорт находятся в настройках оформления и медиатеки.
+- Добавлен установщик: MemuMusic появляется в меню «Пуск» и списке установленных приложений. Медиатека сохраняется при обновлении и удалении.
+- В настройках появились проверка обновлений, автоматическая загрузка и выбор канала. Установка запускается по вашему нажатию и проверяет контрольную сумму.
+- Исправлен выбор вариантов текста. В редакторе работают выделение и контекстное меню; исходный текст можно исправить вручную.
+- Добавлена офлайн-романизация японских, китайских и корейских текстов. Язык можно выбрать вручную; исходный текст и синхронизация по строкам сохраняются.
+- Расширено распознавание ссылок, в том числе X, Instagram, Threads, Reddit, Bluesky, Bilibili и Internet Archive. Доступность зависит от сайта, региона и авторизации. Для некоторых музыкальных сервисов выполняется поиск совпадения на другом источнике.
 
-**Запуск:** скачайте `MemuMusic.exe` и откройте его. Python и установка не требуются. Нужен Microsoft Edge WebView2 Runtime. FFmpeg устанавливается отдельно и необходим для конвертации и анализа громкости. Онлайн-сервисы могут требовать авторизации или быть недоступны в вашем регионе.
+**Установка:** скачайте `MemuMusic-Setup.exe`. С preview 1 необходимо перейти вручную: в первой версии автообновления ещё не было. Переносимый `MemuMusic.exe` также доступен. Требуется Microsoft Edge WebView2 Runtime. FFmpeg устанавливается отдельно для конвертации и анализа громкости.
 
 ---
 
 ## English
 
-The first preview of the standalone MemuMusic desktop music player for Windows.
+The second preview of the standalone Windows music player.
 
-- Local library, albums, artists, favorites, regular and smart playlists.
-- Online search and yt-dlp downloads, file and folder import, a cancellable download queue with retries.
-- Equalizer, crossfade, loudness normalization, visualizer and sleep timer.
-- Synced lyrics with a “By line / By character” switch in Now Playing.
-- Lyrics remain editable after saving a short or empty text. Failed saves retain your draft.
-- Reset a song's lyrics offset exactly to zero by clicking its value.
-- Tag and cover editing, listening history and statistics, themes, Russian and English interfaces.
-- Independent data storage in `%LOCALAPPDATA%\MemuMusic`.
+- The interface now follows the music module's appearance and layout. Language and import controls are available in appearance and library settings.
+- The Windows installer adds MemuMusic to the Start menu and installed-apps list. Your library is kept when updating or uninstalling.
+- Settings now include update checks, automatic downloads and a release channel. Installation starts when you choose it and verifies the checksum.
+- Fixed lyric variant selection. The editor supports text selection and a context menu; the original lyrics remain editable.
+- Added offline romanization for Japanese, Chinese and Korean, with automatic and manual language selection. Original lyrics and line timing are preserved.
+- Expanded link recognition, including X, Instagram, Threads, Reddit, Bluesky, Bilibili and Internet Archive. Availability depends on the site, region and authentication. Some music services are matched to audio on another source.
 
-**Run:** download and open `MemuMusic.exe`. No Python or installation is required. Microsoft Edge WebView2 Runtime is required. FFmpeg is installed separately for conversion and loudness analysis. Online services may require authentication or be unavailable in your region.
+**Install:** download `MemuMusic-Setup.exe`. Preview 1 must be upgraded manually because it did not include an updater. The portable `MemuMusic.exe` is also available. Microsoft Edge WebView2 Runtime is required. FFmpeg is installed separately for conversion and loudness analysis.

@@ -73,8 +73,9 @@ function renderLibrarySettings(host) {
       setLine(t("set.confirm_delete"), t("set.confirm_delete_hint"), setSwitch("confirm_delete")),
       setLine(t("set.artist_photos"), t("set.artist_photos_hint"), setSwitch("artist_photos")),
     ].join(""))}
-    ${setGroup(t("set.import"), t("import.hint"), `<div class="mm-ed-row"><input class="mm-input" id="imp-dir" spellcheck="false" placeholder="D:\\Music"><button type="button" class="mm-btn ghost sm" id="imp-go">${icon("folder")}${esc(t("import.go"))}</button></div>
+    ${setGroup(t("set.import"), t("import.hint"), `<div class="mm-ed-row"><input class="mm-input" id="imp-dir" spellcheck="false" placeholder="D:\\Music"><button type="button" class="mm-btn ghost sm" id="imp-browse" title="${esc(t("app.browse_folder"))}" aria-label="${esc(t("app.browse_folder"))}">${icon("folder")}</button><button type="button" class="mm-btn ghost sm" id="imp-go">${esc(t("import.go"))}</button></div>
       <div class="mm-ed-row"><input class="mm-input" id="m3u-path" spellcheck="false" placeholder="D:\\Music\\list.m3u8"><button type="button" class="mm-btn ghost sm" id="m3u-go">${icon("playlist")}${esc(t("set.m3u_import"))}</button></div>
+      <div class="mm-ap-foot"><button type="button" class="mm-btn ghost sm" id="add-files">${icon("plus")}${esc(t("app.add_files"))}</button><input type="file" id="audio-files" accept="audio/*,.flac,.opus,.m4a,.webm,.wma,.alac,.aiff" multiple hidden></div>
       <p class="mm-sub">${esc(t("set.drop_hint"))}</p>`)}
     ${setGroup(t("set.tidy"), "", setLine(t("dupes.title"), t("dupes.hint"), `<button type="button" class="mm-btn ghost sm" id="set-dupes">${icon("copies")}${esc(t("dupes.find"))}</button>`))}
   </div>`;
@@ -89,6 +90,25 @@ function renderLibrarySettings(host) {
   drawSmart();
   host.querySelector("#set-smart-manage").onclick = () => smartManager();
   host.querySelector("#set-smart-new").onclick = () => smartBuilder(null);
+  const picker = host.querySelector("#audio-files");
+  picker.addEventListener("change", () => { importFiles([...picker.files]); picker.value = ""; });
+  host.querySelector("#imp-browse").onclick = async () => {
+    try {
+      if (!window.pywebview?.api) { host.querySelector("#imp-dir").focus(); return; }
+      const path = await window.pywebview.api.choose_folder();
+      if (path && host.isConnected) host.querySelector("#imp-dir").value = path;
+    } catch (error) { toast(String(error.message || error)); }
+  };
+  host.querySelector("#add-files").onclick = async () => {
+    try {
+      if (!window.pywebview?.api) { picker.click(); return; }
+      const paths = await window.pywebview.api.choose_files();
+      if (!paths.length) return;
+      const result = await API.call("import.files", { paths });
+      await refreshAll(); rerender();
+      toast(result.failed.length ? t("app.import_partial", { n: result.tracks.length, failed: result.failed.length }) : t("app.imported", { n: result.tracks.length }));
+    } catch (error) { toast(String(error.message || error)); }
+  };
   host.querySelector("#imp-go").onclick = async () => {
     const path = host.querySelector("#imp-dir").value.trim(); if (!path) return;
     try { await API.call("import.folder", { path }); toast(t("import.started")); pollJobs(); } catch (error) { toast(String(error.message || error)); }

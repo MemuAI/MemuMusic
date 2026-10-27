@@ -19,7 +19,7 @@ const Theme = (() => {
   const DESIGNS = ["glass", "minimal", "retro", "neon", "compact"];
   const ACCENTS = ["#7c5cff", "#4f8cff", "#1fb2ff", "#22d39b", "#7fb54a", "#f2b233", "#ff7a45", "#ff3d77", "#e2523b", "#b26bff", "#d97757"];
   const HOME_SECTIONS = ["greet", "quick", "spotlight", "continue", "mixes", "recent", "liked", "artists"];
-  const DEFAULTS = { mode: "system", theme: "cover", design: "glass", accent: "", coverTint: true, cover: "m", density: "normal", font: "system",
+  const DEFAULTS = { mode: "dark", theme: "cover", design: "glass", accent: "", coverTint: true, cover: "m", density: "normal", font: "system",
     radius: "normal", motion: "full", viz: "ring", npStyle: "card", npTheme: "dark", bg: "cover", homeHidden: [] };
   const DESIGN_PRESETS = { compact: { density: "compact", cover: "s" }, retro: { font: "serif", radius: "sharp" }, minimal: { bg: "solid" }, neon: { font: "grotesk" }, glass: {} };
   const FONTS = {
@@ -117,6 +117,7 @@ const Theme = (() => {
 
   function apply() {
     const sch = scheme(), th = theme();
+    root.style.colorScheme = sch;
     root.setAttribute("data-mm-scheme", sch);
     root.setAttribute("data-mm-theme", th.id);
     root.setAttribute("data-mm-design", DESIGNS.includes(ui.design) ? ui.design : "glass");
@@ -213,8 +214,11 @@ const Theme = (() => {
         ${line(L("bg.title"), L("bg.hint"), seg("bg", ["cover", "gradient", "solid"]))}`)}
       ${group(L("home.title"), L("home.hint"), `<div class="mm-ap-home">${HOME_SECTIONS.map((k) => `<label class="mm-ap-toggle"><span>${esc(L("home." + k))}</span><span class="mm-switch"><input type="checkbox" data-home="${k}"${hidden(k) ? "" : " checked"}><i></i></span></label>`).join("")}</div>`)}
       <div class="mm-ap-foot"><button type="button" class="mm-btn ghost sm" id="ap-reset">${icon("refresh")}${esc(L("reset"))}</button></div>
+      ${group(t("app.language"), t("app.language_hint"), `<div class="mm-seg2" role="radiogroup" aria-label="${esc(t("app.language"))}"><button type="button" role="radio" data-app-language="ru" aria-checked="${App.lang === "ru"}">Русский</button><button type="button" role="radio" data-app-language="en" aria-checked="${App.lang === "en"}">English</button></div>`)}
     </div>`;
     host.addEventListener("click", (e) => {
+      const language = e.target.closest("[data-app-language]");
+      if (language) { App.setLanguage(language.dataset.appLanguage); return; }
       const b = e.target.closest("[data-ui] [data-v]"); if (!b) return;
       const key = b.closest("[data-ui]").dataset.ui;
       set(key, b.dataset.v);

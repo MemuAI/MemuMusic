@@ -1,0 +1,14 @@
+.mm-update-badge { margin-left: auto; color: var(--tint-ink); font-style: normal; font-weight: 800; line-height: 1; }
+.mm-update-card { display: flex; align-items: flex-start; gap: 14px; padding: 18px; border: 1px solid var(--mm-line); border-radius: calc(16px * var(--mm-rk)); background: var(--mm-panel); }
+.mm-update-icon { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; color: var(--tint-ink); background: color-mix(in srgb, var(--tint) 14%, transparent); }
+.mm-update-copy { min-width: 0; flex: 1; }
+.mm-update-copy > b { color: var(--mm-text); }
+.mm-update-copy p, .mm-update-copy small { margin: 5px 0 0; color: var(--mm-muted); line-height: 1.5; }
+.mm-update-copy small { display: block; margin-top: 12px; }
+.mm-update-error { color: var(--mm-danger) !important; }
+.mm-update-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.mm-update-progress { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.mm-update-progress progress { flex: 1; width: 100%; height: 7px; accent-color: var(--tint); }
+.mm-update-progress small { flex: none; margin: 0; font-variant-numeric: tabular-nums; }
+.mm-update-select { max-width: 225px; min-width: 150px; }
+@media (max-width: 800px) { .mm-update-card { padding: 14px; } .mm-update-icon { display: none; } .mm-update-select { min-width: 120px; } }

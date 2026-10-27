@@ -5,6 +5,8 @@ runpy.run_path('tools/collect_notices.py', run_name='__main__')
 
 datas = [('memumusic/web', 'memumusic/web')]
 datas += collect_data_files('yt_dlp')
+datas += collect_data_files('pykakasi')
+datas += collect_data_files('pypinyin')
 datas += [('build/licenses', 'licenses'), ('LICENSE', 'licenses/application-LICENSE'), ('THIRD_PARTY_NOTICES.md', 'licenses/THIRD_PARTY_NOTICES.md')]
 a = Analysis(['launch.py'], pathex=[], binaries=[], datas=datas,
     hiddenimports=['webview.platforms.edgechromium', 'uvicorn.logging', 'uvicorn.loops.asyncio',

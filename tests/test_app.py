@@ -62,6 +62,11 @@ class AppTests(unittest.TestCase):
     def test_session_origin_and_host_boundary(self):
         anonymous = httpx.post(self.server.url + "/api/music/call", json={"op": "library.list"}, trust_env=False)
         self.assertEqual(anonymous.status_code, 403)
+        self.assertEqual(httpx.get(self.server.url + "/api/updates/status", trust_env=False).status_code, 403)
+        self.assertEqual(self.client.post("/api/updates/settings", json={"enabled": False}, headers={"Origin": "https://untrusted.invalid"}).status_code, 403)
+        status = self.client.get("/api/updates/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertIn("current_version", status.json())
         self.assertEqual(self.client.post("/api/music/call", json={"op": "library.list"}, headers={"Origin": "https://untrusted.invalid"}).status_code, 403)
         self.assertEqual(self.client.get("/health", headers={"Host": "untrusted.invalid"}).status_code, 400)
 

@@ -5,3 +5,6 @@ pywebview==6.2.1
 pillow==12.3.0
 mutagen==1.48.1
 yt-dlp==2026.8.19
+pykakasi==2.3.0
+pypinyin==0.55.0
+korean-romanizer==0.25.0
