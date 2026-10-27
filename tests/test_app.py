@@ -16,7 +16,7 @@ class AppTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
-        cls.root = Path(cls.temp.name)
+        cls.root = Path(cls.temp.name).resolve()
         cls.previous = os.environ.get("MEMUMUSIC_DATA_DIR")
         os.environ["MEMUMUSIC_DATA_DIR"] = str(cls.root / "profile")
         from memumusic.server import LocalServer
@@ -36,7 +36,7 @@ class AppTests(unittest.TestCase):
         cls.server.stop()
         from memumusic.music.library import _LIBS
         for key, lib in list(_LIBS.items()):
-            if str(cls.root) in key:
+            if Path(key).resolve().is_relative_to(cls.root):
                 lib.close()
                 del _LIBS[key]
         if cls.previous is None:
