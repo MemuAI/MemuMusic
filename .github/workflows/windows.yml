@@ -89,7 +89,7 @@ jobs:
         shell: bash
         run: |
           tag="v1.0.0"
-          if [[ "$GITHUB_REF" != "refs/tags/$tag" ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/* && "${GITHUB_REF#refs/tags/}" != "$tag" ]]; then
             echo "Unexpected release tag" >&2; exit 1
           fi
           gh release create "$tag" dist/MemuMusic-Setup.exe dist/MemuMusic-Setup.exe.sha256 \
