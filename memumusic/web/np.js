@@ -140,14 +140,24 @@ const NP = (() => {
   async function applyRoman() {
     const current = lyrics, token = ++romanToken;
     if (!current) return;
-    if (!roman) { current.synced = current.original.synced; current.plain = current.original.plain; renderLyrics(); return; }
+    if (!roman) { current.synced = current.original.synced; current.plain = current.original.plain; renderLyrics(true); refreshRomanBar(); return; }
     try {
       const res = await API.call("lyrics.romanize", { id: current.id, language: romanLanguage });
       if (token !== romanToken || lyrics !== current || !roman) return;
-      current.synced = res.synced; current.plain = res.plain; renderLyrics();
+      current.synced = res.synced; current.plain = res.plain; renderLyrics(true); refreshRomanBar();
     } catch (error) {
-      if (token === romanToken) { roman = false; renderBar(); toast(t("lyrics.roman_error") + ": " + String(error.message || error)); }
+      if (token === romanToken && lyrics === current) {
+        roman = false; current.synced = current.original.synced; current.plain = current.original.plain;
+        renderLyrics(true); refreshRomanBar(); toast(t("lyrics.roman_error") + ": " + String(error.message || error));
+      }
     }
+  }
+
+  function refreshRomanBar() {
+    const bar = $("#ly-bar"), button = $("[data-ly=roman]", bar), label = $(".mm-ly-src em", bar);
+    if (button) button.setAttribute("aria-pressed", String(roman));
+    if (!roman) $("[data-lylang]", bar)?.remove();
+    if (label && lyrics) label.textContent = lyrics.synced ? (lyrics.synced.some((r) => r[2]) ? t("lyrics.words") : t("lyrics.synced")) : t("lyrics.plain");
   }
 
   function renderBar() {
@@ -229,10 +239,10 @@ const NP = (() => {
       return `<button type="button" class="mm-lyric${words ? " words" : ""}" data-l="${ln.row}" data-t="${row[0]}"><span>${lineHtml(row, !words)}</span></button>${gapAfter.has(i) ? gapHtml(i) : ""}`;
     }).join("");
   }
-  function renderLyrics() {
+  function renderLyrics(preserveBar = false) {
     const box = $("#lyrics-inner");
     if (!lyrics || editing) return;
-    renderBar();
+    if (!preserveBar) renderBar();
     const mode = syncShown = syncMode();
 
     $("#lyrics").classList.toggle("static", (!lyrics.synced && lyrics.state !== "loading") || (!!lyrics.synced && mode === "off"));

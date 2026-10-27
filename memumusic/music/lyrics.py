@@ -60,10 +60,17 @@ def romanize_text(text: str, language: str = "auto") -> str:
     from pypinyin import Style, lazy_pinyin
     japanese = language == "ja" or (language == "auto" and bool(_KANA.search(text or "")))
 
+    def japanese_reading(match: re.Match) -> str:
+        original = match.group()
+        parts = _kakasi().convert(original)
+        if "".join(part["orig"] for part in parts) != original or any(not part["hepburn"] for part in parts):
+            return original
+        return " ".join(part["hepburn"] for part in parts)
+
     def line(value: str) -> str:
         value = _HANGUL.sub(lambda m: Romanizer(m.group()).romanize(), value)
         if japanese:
-            return _JAPANESE.sub(lambda m: " ".join(part["hepburn"] for part in _kakasi().convert(m.group())), value)
+            return _JAPANESE.sub(japanese_reading, value)
         return _HAN.sub(lambda m: " ".join(lazy_pinyin(m.group(), style=Style.NORMAL)), value)
 
     return "\n".join(line(s) for s in (text or "").split("\n"))
