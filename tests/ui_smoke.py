@@ -40,6 +40,15 @@ def main():
                 response = client.post("/api/music/call", json={"op": op, "args": params or {}})
                 response.raise_for_status()
                 return response.json()["result"]
+            def wait_offset(track_id, expected):
+                deadline = time.monotonic() + 5
+                actual = None
+                while time.monotonic() < deadline:
+                    actual = call('lyrics.get', {'id': track_id})['offset']
+                    if actual == expected:
+                        return
+                    time.sleep(.05)
+                raise AssertionError(f'Offset for {track_id}: expected {expected}, got {actual}')
             call("settings.set", {"auto_lyrics": False, "artist_photos": False, "lyrics_sync": "smart"})
             tracks = []
             for name in ("First", "Second"):
@@ -85,12 +94,10 @@ def main():
                 print('PASS: startup, real audio playback and line-mode switch', flush=True)
                 page.screenshot(path=str(root / 'build/now-playing.png'))
                 page.locator('#ly-bar [data-ly="off-reset"]').click()
-                page.wait_for_timeout(600)
-                assert call("lyrics.get", {"id": tid})["offset"] == 0
+                wait_offset(tid, 0)
                 page.locator('#ly-bar [data-ly="off+"]').click()
                 page.evaluate("async id => { const tr=await MemuMusic.API.call('library.list'); MemuMusic.Player.playList(tr.tracks,id,'Test'); MemuMusic.Player.pause(); }", tracks[1]['id'])
-                page.wait_for_timeout(550)
-                assert call('lyrics.get', {'id': tid})['offset'] == .1
+                wait_offset(tid, .1)
                 assert call('lyrics.get', {'id': tracks[1]['id']})['offset'] == 0
                 page.evaluate("async id => { const tr=await MemuMusic.API.call('library.list'); MemuMusic.Player.playList(tr.tracks,id,'Test'); MemuMusic.Player.pause(); }", tid)
                 page.locator('#ly-bar [data-ly="sync"]').wait_for()
