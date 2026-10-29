@@ -196,6 +196,7 @@ const Theme = (() => {
   const line = (title, hint, control) => `<div class="mm-ap-line"><div><b>${esc(title)}</b>${hint ? `<p>${esc(hint)}</p>` : ""}</div>${control}</div>`;
   function render(host) {
     host.innerHTML = `<div class="mm-ap">
+      ${group(t("app.language"), t("app.language_hint"), `<div class="mm-ap-languages" role="radiogroup" aria-label="${esc(t("app.language"))}">${[["ru", "Русский"], ["en", "English"]].map(([code, name]) => `<button type="button" class="mm-ap-card" role="radio" data-app-language="${code}" aria-checked="${App.lang === code}"><span class="mm-language-code" aria-hidden="true">${code.toUpperCase()}</span><span class="mm-ap-name"><b>${name}</b></span><i class="mm-ap-check">${icon("check")}</i></button>`).join("")}</div>`)}
       ${group(L("mode.title"), L("mode.hint"), seg("mode", ["light", "dark", "system"]))}
       ${group(L("theme.title"), L("theme.hint"), `<div class="mm-ap-themes" role="radiogroup" data-ui="theme">${THEMES.map((th) => `<button type="button" class="mm-ap-card" role="radio" data-v="${th.id}" aria-checked="${ui.theme === th.id}">${mini(th)}<span class="mm-ap-name"><b>${esc(L("theme." + th.id))}</b><span>${esc(L("theme." + th.id + "_hint"))}</span></span><i class="mm-ap-check">${icon("check")}</i></button>`).join("")}</div>`)}
       ${group(L("design.title"), L("design.hint"), `<div class="mm-ap-designs" role="radiogroup" data-ui="design">${DESIGNS.map((d) => `<button type="button" class="mm-ap-card" role="radio" data-v="${d}" aria-checked="${ui.design === d}">${designMini(d)}<span class="mm-ap-name"><b>${esc(L("design." + d))}</b><span>${esc(L("design." + d + "_hint"))}</span></span><i class="mm-ap-check">${icon("check")}</i></button>`).join("")}</div>`)}
@@ -214,7 +215,6 @@ const Theme = (() => {
         ${line(L("bg.title"), L("bg.hint"), seg("bg", ["cover", "gradient", "solid"]))}`)}
       ${group(L("home.title"), L("home.hint"), `<div class="mm-ap-home">${HOME_SECTIONS.map((k) => `<label class="mm-ap-toggle"><span>${esc(L("home." + k))}</span><span class="mm-switch"><input type="checkbox" data-home="${k}"${hidden(k) ? "" : " checked"}><i></i></span></label>`).join("")}</div>`)}
       <div class="mm-ap-foot"><button type="button" class="mm-btn ghost sm" id="ap-reset">${icon("refresh")}${esc(L("reset"))}</button></div>
-      ${group(t("app.language"), t("app.language_hint"), `<div class="mm-seg2" role="radiogroup" aria-label="${esc(t("app.language"))}"><button type="button" role="radio" data-app-language="ru" aria-checked="${App.lang === "ru"}">Русский</button><button type="button" role="radio" data-app-language="en" aria-checked="${App.lang === "en"}">English</button></div>`)}
     </div>`;
     host.addEventListener("click", (e) => {
       const language = e.target.closest("[data-app-language]");
@@ -239,8 +239,12 @@ const Theme = (() => {
   }
 
   function appbar() {
+    const np = document.getElementById("np"), npOpen = np && !np.hidden && !np.classList.contains("out");
+    const light = npOpen ? np.hasAttribute("data-light") : scheme() === "light";
+    root.style.setProperty("--music-caption-ink", light ? "#1d1b24" : "#f4f1f6");
+    root.toggleAttribute("data-music-caption-light", light);
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = getComputedStyle(root).getPropertyValue("--mm-bg").trim();
+    if (meta) meta.content = npOpen ? (light ? "#faf9fc" : "#050507") : getComputedStyle(root).getPropertyValue("--mm-bg").trim();
   }
   if (typeof SETTINGS_TABS !== "undefined") SETTINGS_TABS.push({ id: "appearance", order: 10, icon: "sparkle", title: () => t("ui.tab"), render });
   apply();

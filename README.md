@@ -1,5 +1,7 @@
 # MemuMusic
 
+**Русский** · [English](README.en.md)
+
 Лёгкий, крайне красивый и удобный музыкальный плеер на Windows, с большим количеством функционала.
 
 <img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/1cea81b8-9015-4b3c-8533-786d19af41bc" />
@@ -16,6 +18,18 @@
 - И многое остальное, а ещё больше - в будущем!
 
 <img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/d3e98789-d520-483e-a523-e0a60cf2b783" />
+
+## Скриншоты
+
+![Главная страница MemuMusic](docs/screenshots/ru-home.png)
+
+![Библиотека альбомов](docs/screenshots/ru-library.png)
+
+![Сейчас играет и текст песни](docs/screenshots/ru-now-playing.png)
+
+![Плейлисты](docs/screenshots/ru-playlists.png)
+
+![Настройки оформления](docs/screenshots/ru-settings.png)
 
 ## Важно!
 

@@ -27,18 +27,25 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
-.music-titlebar { position: fixed; z-index: 100; inset: 0 0 auto; height: 38px; display: flex; align-items: center; background: var(--mm-surface, #121217); color: var(--mm-text, #f4f3f7); border-bottom: 1px solid var(--mm-line, transparent); user-select: none; }
-.music-titlebar-name { display: flex; align-items: center; gap: 8px; padding-left: 14px; font-size: 12px; font-weight: 650; }
-.music-titlebar-name img { width: 18px; height: 18px; }
+:root { --memu-appbar-h: 36px; --music-caption-ink: #f4f1f6; }
+.music-titlebar { position: fixed; z-index: 100; inset: 0 0 auto; height: var(--memu-appbar-h); display: flex; align-items: center; background: linear-gradient(to bottom, #00000038, transparent); color: var(--music-caption-ink); user-select: none; }
+html[data-music-caption-light] .music-titlebar { background: linear-gradient(to bottom, #ffffff4d, transparent); }
 .music-titlebar-drag { flex: 1; height: 100%; }
-.music-titlebar button { height: 100%; width: 46px; border: 0; background: transparent; color: inherit; font: 16px var(--sans); cursor: pointer; }
-.music-titlebar button:hover { background: var(--mm-hover, #7773); }
+.music-titlebar button { height: 100%; width: 46px; display: grid; place-items: center; border: 0; border-radius: 0; background: transparent; color: inherit; cursor: default; transition: background-color .12s ease, color .12s ease; }
+.music-titlebar button svg { width: 10px; height: 10px; stroke-width: 1; }
+.music-titlebar button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+.music-titlebar button:active { background: color-mix(in srgb, currentColor 16%, transparent); }
 .music-titlebar button:focus-visible { outline: 2px solid var(--tint, currentColor); outline-offset: -3px; }
 .music-titlebar button[data-window="close"]:hover { background: #c42b39; color: white; }
-html:not(.music-fullscreen) .mm { top: 38px; }
-html:not(.music-fullscreen) .mm-np { top: 38px; }
-html:not(.music-fullscreen) .mm-drawer { top: 50px; }
+.music-titlebar .restore, html[data-music-maximized] .music-titlebar .maximize { display: none; }
+html[data-music-maximized] .music-titlebar .restore { display: block; }
+html.music-fullscreen { --memu-appbar-h: 0px; }
 html.music-fullscreen .music-titlebar { display: none; }
+@media (prefers-reduced-motion: reduce) { .music-titlebar button { transition: none; } }
+.mm-ap-languages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.mm-ap-languages .mm-ap-card { grid-template-columns: auto 1fr; align-items: center; padding: 16px 44px 16px 14px; }
+.mm-language-code { display: grid; place-items: center; width: 38px; height: 38px; border-radius: calc(10px * var(--mm-rk)); background: var(--mm-panel-2); color: var(--tint-ink); font-size: 12px; font-weight: 750; }
+@media (max-width: 600px) { .mm-ap-languages { grid-template-columns: 1fr; } }
 [hidden] { display: none !important; }
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }

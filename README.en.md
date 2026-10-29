@@ -1,41 +1,40 @@
 # MemuMusic
 
-A desktop music player for Windows with a local library, playlists, online search and downloads, synchronized lyrics, an equalizer, visualizer, metadata editor and listening statistics.
+[Русский](README.md) · **English**
 
-[Русская версия](README.md)
+A lightweight, beautiful and convenient music player for Windows with a wide range of features.
 
-## Run
+<img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/1cea81b8-9015-4b3c-8533-786d19af41bc" />
 
-Download and run `MemuMusic-Setup.exe` from Releases. The installer adds the app to the Windows Start menu and installed-apps list. No Python is required. A portable `MemuMusic.exe` is also available. Microsoft Edge WebView2 Runtime is required and is usually present on Windows 10/11.
+## Features
 
-Import files or folders in the library settings, or drop audio files into the window. Folder imports leave your files in place. Downloads and dropped files go to your configured download folder. Press `F11` for fullscreen. Language, appearance, queue and preferences persist across restarts.
+- Download tracks from YouTube, SoundCloud and many other services, or add tracks you already have.
+- Create your own playlists, or use Smart Playlists for whatever you need.
+- Find tracks directly in the app with Search.
+- Now Playing: a beautiful full-screen view with synchronized lyrics in real time, plenty of settings and more.
+- Make it your own: choose from many themes, quality settings and more.
+- Create your own collections of tracks and artists.
+- Recommendations: get suggestions based on your tracks and data from YouTube Music.
+- And much more, with even more to come in the future!
 
-Your library and settings are stored in `%LOCALAPPDATA%\MemuMusic`. Use `MEMUMUSIC_DATA_DIR` or `--data-dir` to select a different location.
+<img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/d3e98789-d520-483e-a523-e0a60cf2b783" />
 
-yt-dlp is included and can be updated from the download settings. Optional FFmpeg is required for conversion, loudness analysis and some metadata operations. Place it on `PATH` or in the library's `bin` folder. Availability of online sources depends on the service, region and authentication.
+## Screenshots
 
-In Now Playing you can choose among lyric variants, edit them, and enable offline romanization for Japanese, Chinese or Korean. Language detection uses the full lyrics and the track title, artist, and album; when only characters shared by Japanese and Chinese remain, automatic detection can still be wrong. The original lyrics are preserved.
+![MemuMusic home](docs/screenshots/en-home.png)
 
-Recommendations find similar songs on YouTube Music based on your library. Play streams an available track without adding a file to the library; downloading is a separate action.
+![Album library](docs/screenshots/en-library.png)
 
-Use **Updates** in settings to control automatic checks and downloads. Installation starts when you choose it and keeps your library. The portable EXE opens the installer when updating. Uninstalling the app does not remove your library files.
+![Now playing and lyrics](docs/screenshots/en-now-playing.png)
 
-## Development
+![Playlists](docs/screenshots/en-playlists.png)
 
-```powershell
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe -m memumusic
-```
+![Appearance settings](docs/screenshots/en-settings.png)
 
-Build the executable with `powershell -ExecutionPolicy Bypass -File build.ps1`. To build the installer, install Inno Setup 6 and then run `powershell -ExecutionPolicy Bypass -File build-installer.ps1`.
+## Important!
 
-Run the local UI without opening a desktop window:
-
-```powershell
-.venv\Scripts\python.exe -m memumusic --serve --data-dir .\build\test-data
-```
-
-The server binds only to `127.0.0.1` and selects a free port. API requests require a session cookie and pass an Origin check. Closing the desktop window stops playback.
+- The project was made using AI. Whether or not to use it is entirely up to you, but the use of AI is not hidden — so there is no license, take what you want!
+- MemuMusic is based on [MemuAI](https://github.com/MemuAI/MemuAI), one of the largest applications for chatting and working with AI, where MemuMusic is an optional built-in module. You can use MemuMusic as a module in MemuAI: it has even more functionality, including AI recommendations and AI-powered lyrics search. The applications are otherwise practically identical, but the choice is entirely yours.
+- There is plenty of potential to add many more features in the future, but I cannot promise whether or not they will be added.
 
 Project license: Unlicense. Retained copyright notices and dependency licenses are listed in `licenses/` and `THIRD_PARTY_NOTICES.md`.

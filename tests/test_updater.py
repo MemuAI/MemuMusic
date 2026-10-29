@@ -83,6 +83,9 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(self.wait({'ready', 'error'})['phase'], 'ready')
 
     def test_semver_and_preview_policy(self):
+        self.assertEqual(module.version_key('1.0'), module.version_key('1.0.0'))
+        self.assertLess(module.version_key('1.0'), module.version_key('1.0.1'))
+        self.assertEqual(module.version_key('v1.0'), module.version_key('1.0.0'))
         self.assertLess(module.version_key('1.0.0-preview.9'), module.version_key('1.0.0-preview.10'))
         self.assertLess(module.version_key('1.0.0-preview.10'), module.version_key('1.0.0'))
         self.assertLess(module.version_key('1.0.0'), module.version_key('1.0.1-preview.1'))

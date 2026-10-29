@@ -48,12 +48,11 @@
   <symbol id="i-album" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="12" cy="12" r="4"/><circle class="f" cx="12" cy="12" r="1"/></symbol>
 </svg>
 
-<header class="music-titlebar pywebview-drag-region" aria-label="MemuMusic">
-  <span class="music-titlebar-name pywebview-drag-region"><img src="/assets/icon.svg" alt="">MemuMusic</span>
+<header class="music-titlebar" aria-label="MemuMusic">
   <span class="music-titlebar-drag pywebview-drag-region"></span>
-  <button type="button" data-window="minimize" aria-label="Minimize" title="Minimize">&#x2212;</button>
-  <button type="button" data-window="maximize" aria-label="Maximize or restore" title="Maximize or restore">&#x25a1;</button>
-  <button type="button" data-window="close" aria-label="Close" title="Close">&#x00d7;</button>
+  <button type="button" data-window="minimize" aria-label="Minimize" title="Minimize"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 5.5h10"/></svg></button>
+  <button type="button" data-window="maximize" aria-label="Maximize" title="Maximize"><svg class="maximize" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" rx="1.5"/></svg><svg class="restore" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y="2.5" width="7" height="7" rx="1.25"/><path d="M2.5 2.5V2A1.5 1.5 0 0 1 4 .5h4A1.5 1.5 0 0 1 9.5 2v4A1.5 1.5 0 0 1 8 7.5h-.5"/></svg></button>
+  <button type="button" data-window="close" aria-label="Close" title="Close"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="m.5.5 9 9M9.5.5l-9 9"/></svg></button>
 </header>
 <div class="mm" id="app" data-view="home">
   <canvas class="mm-ambient" id="ambient" aria-hidden="true"></canvas>

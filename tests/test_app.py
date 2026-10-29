@@ -23,7 +23,7 @@ class AppTests(unittest.TestCase):
         cls.server = LocalServer().start()
         cls.client = httpx.Client(base_url=cls.server.url, trust_env=False, timeout=30)
         cls.client.get("/")
-        cls.call("settings.set", {"auto_lyrics": False, "artist_photos": False})
+        cls.call("settings.set", {"auto_lyrics": False, "artist_photos": False, "auto_analyze": False})
         cls.song = cls.root / "Example - First.wav"
         with wave.open(str(cls.song), "wb") as output:
             output.setparams((1, 2, 22050, 0, "NONE", "not compressed"))

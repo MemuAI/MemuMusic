@@ -48,15 +48,32 @@ class Native:
     def __init__(self):
         self._window = None
         self._maximized = False
+        self._fullscreen = False
+
+    def window_state(self):
+        return {"maximized": self._maximized, "fullscreen": self._fullscreen}
+
+    def _notify_state(self, maximized=None):
+        if maximized is not None:
+            self._maximized = maximized
+        if self._window:
+            try:
+                self._window.evaluate_js("window.dispatchEvent(new CustomEvent('music-window-state', {detail: "
+                                         + json.dumps(self.window_state()) + "}));")
+            except Exception:
+                log.debug("Window state is not ready", exc_info=True)
 
     def minimize_window(self):
         self._window.minimize()
 
     def toggle_maximize(self):
+        target = not self._maximized
         if self._maximized:
             self._window.restore()
         else:
             self._window.maximize()
+        self._maximized = target
+        return self.window_state()
 
     def close_window(self):
         self._window.destroy()
@@ -80,6 +97,9 @@ class Native:
 
     def toggle_fullscreen(self):
         self._window.toggle_fullscreen()
+        self._fullscreen = not self._fullscreen
+        self._notify_state()
+        return self.window_state()
 
     def activate(self):
         if self._window:
@@ -126,8 +146,8 @@ def run():
         native._window = webview.create_window("MemuMusic", server.url, js_api=native,
             width=width, height=height, min_size=(720, 480), background_color="#08080b", text_select=True, frameless=True, easy_drag=False)
 
-        native._window.events.maximized += lambda: setattr(native, '_maximized', True)
-        native._window.events.restored += lambda: setattr(native, '_maximized', False)
+        native._window.events.maximized += lambda: native._notify_state(maximized=True)
+        native._window.events.restored += lambda: native._notify_state(maximized=False)
 
         def save_window():
             try:

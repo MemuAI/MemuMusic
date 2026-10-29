@@ -1,7 +1,9 @@
 import hashlib
+import ctypes
 import os
 from pathlib import Path
 import signal
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -36,8 +38,7 @@ def wait_for(predicate, seconds=30):
 class InstallerTest(unittest.TestCase):
     def test_install_locked_update_rollback_relaunch_and_uninstall(self):
         BUILD.mkdir(exist_ok=True)
-        temp = tempfile.TemporaryDirectory(prefix='memumusic-installer-', dir=BUILD)
-        root = Path(temp.name).resolve()
+        root = Path(tempfile.mkdtemp(prefix='memumusic-installer-', dir=BUILD)).resolve()
         self.assertEqual(root.parent, BUILD)
         self.assertTrue(root.name.startswith('memumusic-installer-'))
         appdir = root / 'app'
@@ -53,12 +54,19 @@ class InstallerTest(unittest.TestCase):
         common = ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', f'/DIR={appdir}']
         owned = []
         logs = []
+        failed = True
 
         def run_setup(*args):
             log = root / f'install-{len(logs)}.log'
             logs.append(log)
             return subprocess.run([str(SETUP), *common, f'/LOG={log}', *args], cwd=root, stdout=subprocess.DEVNULL,
                                   stderr=subprocess.DEVNULL, timeout=35)
+
+        def run_uninstall(label):
+            log = root / f'uninstall-{label}.log'
+            logs.append(log)
+            return subprocess.run([str(uninstaller), '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', f'/LOG={log}'],
+                                  cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
 
         def child_pids(parent):
             script = (f'Get-CimInstance Win32_Process -Filter "ParentProcessId={int(parent)}" | '
@@ -77,6 +85,23 @@ class InstallerTest(unittest.TestCase):
             result = subprocess.run(['powershell', '-NoProfile', '-Command', script], text=True, capture_output=True, check=True,
                                     env={**os.environ, 'MEMUMUSIC_TEST_APP': str(app)})
             return [int(pid) for pid in result.stdout.split() if pid.isdigit()]
+
+        kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+        kernel32.CreateFileW.argtypes = [ctypes.c_wchar_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p,
+                                        ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p]
+        kernel32.CreateFileW.restype = ctypes.c_void_p
+        kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+        last_lock_error = 0
+
+        def application_free():
+            nonlocal last_lock_error
+            handle = kernel32.CreateFileW(str(app), 0x80000000 | 0x40000000, 0, None, 3, 0, None)
+            if handle == ctypes.c_void_p(-1).value:
+                last_lock_error = ctypes.get_last_error()
+                return False
+            kernel32.CloseHandle(handle)
+            last_lock_error = 0
+            return True
 
         try:
             first = run_setup()
@@ -153,8 +178,7 @@ ctypes.windll.kernel32.CloseHandle(ctypes.c_void_p(h))
                 print(update_log.read_text(encoding='utf-8-sig', errors='replace')[-5000:])
                 raise
 
-            unblocked = subprocess.run([str(uninstaller), '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'],
-                                       cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+            unblocked = run_uninstall('blocked')
             self.assertNotEqual(unblocked.returncode, 0, 'uninstall must refuse while the app is running')
             self.assertTrue(app.exists())
 
@@ -162,12 +186,16 @@ ctypes.windll.kernel32.CloseHandle(ctypes.c_void_p(h))
             self.assertTrue(pids, 'the update must relaunch the app')
             for pid in pids:
                 stop_tree(pid)
-            time.sleep(.3)
-            removed = subprocess.run([str(uninstaller), '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'],
-                                     cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+            wait_for(lambda: not app_pids(), seconds=10)
+            try:
+                wait_for(application_free, seconds=10)
+            except AssertionError as exc:
+                raise AssertionError(f'Test application stopped but its executable is still locked: Win32 {last_lock_error}') from exc
+            removed = run_uninstall('closed')
             self.assertEqual(removed.returncode, 0)
             self.assertFalse(app.exists())
             self.assertEqual(data.read_text(encoding='utf-8'), 'user content survives')
+            failed = False
         finally:
             for pid in app_pids():
                 stop_tree(pid)
@@ -179,7 +207,15 @@ ctypes.windll.kernel32.CloseHandle(ctypes.c_void_p(h))
                     except subprocess.TimeoutExpired:
                         process.kill()
             time.sleep(.3)
-            temp.cleanup()
+            if failed:
+                print(f'Installer diagnostics preserved at {root}')
+                for log in logs:
+                    if log.is_file():
+                        print(f'--- {log.name} ---\n' + log.read_text(encoding='utf-8-sig', errors='replace')[-6000:])
+            else:
+                self.assertEqual(root.parent, BUILD)
+                self.assertTrue(root.name.startswith('memumusic-installer-'))
+                shutil.rmtree(root)
 
 
 if __name__ == '__main__':

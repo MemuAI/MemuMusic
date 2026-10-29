@@ -80,9 +80,57 @@ def main():
                 page.goto(url)
                 page.wait_for_function("document.documentElement.dataset.ready === 'true'", timeout=20000)
                 assert not errors, errors
+                if not args.module_json:
+                    assert page.locator('.music-titlebar-name').count() == 0
+                    assert page.locator('[data-window].pywebview-drag-region, .pywebview-drag-region [data-window]').count() == 0
+                    assert page.evaluate("getComputedStyle(document.querySelector('.music-titlebar')).backgroundColor === 'rgba(0, 0, 0, 0)'")
+                    assert page.locator('#app').bounding_box()['y'] == 0
+                    assert page.locator('.music-titlebar').bounding_box()['height'] == 36
+                    for width, height in ((720, 480), (1280, 820)):
+                        page.set_viewport_size({'width': width, 'height': height})
+                        assert page.locator('.mm-brand').bounding_box()['y'] >= 36
+                    page.set_viewport_size({'width': 1280, 'height': 820})
+                    page.evaluate("MemuMusic.Theme.set('mode', 'light')")
+                    assert page.evaluate("document.documentElement.hasAttribute('data-music-caption-light')")
                 page.evaluate("async id => { const tr = await MemuMusic.API.call('library.list'); MemuMusic.Player.playList(tr.tracks, id, 'Test'); MemuMusic.NP().open(); }", tid)
                 page.wait_for_function("MemuMusic.Player.times().cur > .1")
                 page.evaluate("MemuMusic.Player.pause()")
+                if not args.module_json:
+                    assert not page.evaluate("document.documentElement.hasAttribute('data-music-caption-light')")
+                    assert page.locator('#np').bounding_box()['y'] == 0
+                    page.evaluate("MemuMusic.Theme.set('npTheme', 'auto')")
+                    assert page.evaluate("document.documentElement.hasAttribute('data-music-caption-light')")
+                    page.wait_for_timeout(650)
+                    page.screenshot(path=str(root / 'build' / 'now-playing-light.png'))
+                    page.evaluate("MemuMusic.Theme.set('npTheme', 'dark')")
+                    page.wait_for_timeout(650)
+                    page.screenshot(path=str(root / 'build' / 'now-playing-dark.png'))
+                    page.evaluate('''() => {
+                      window._windowMock = {maximized:false, fullscreen:false, calls:0, fail:false};
+                      window.pywebview = {api: {
+                        window_state: async () => ({..._windowMock}),
+                        toggle_fullscreen: async () => { _windowMock.calls++; await new Promise(r => setTimeout(r, 40)); if (_windowMock.fail) throw Error('test fullscreen failure'); _windowMock.fullscreen = !_windowMock.fullscreen; return {..._windowMock}; },
+                        toggle_maximize: async () => { _windowMock.maximized = !_windowMock.maximized; return {..._windowMock}; }
+                      }};
+                      window.dispatchEvent(new Event('pywebviewready'));
+                    }''')
+                    page.locator('[data-window="maximize"]').click()
+                    page.wait_for_function("document.documentElement.hasAttribute('data-music-maximized')")
+                    assert page.locator('[data-window="maximize"] .restore').is_visible()
+                    page.evaluate("_windowMock.fail = true")
+                    page.keyboard.press('F11')
+                    page.wait_for_timeout(100)
+                    assert not page.evaluate("document.documentElement.classList.contains('music-fullscreen')")
+                    page.evaluate("_windowMock.fail = false")
+                    page.keyboard.press('F11')
+                    page.keyboard.press('F11')
+                    page.wait_for_function("document.documentElement.classList.contains('music-fullscreen')")
+                    assert page.evaluate('_windowMock.calls') == 2
+                    assert not page.locator('.music-titlebar').is_visible()
+                    page.keyboard.press('Escape')
+                    page.wait_for_function("!document.documentElement.classList.contains('music-fullscreen')")
+                    assert page.locator('#np').is_visible()
+                    assert page.locator('.music-titlebar').is_visible()
                 assert page.locator('#bar-title').inner_text() == 'First'
                 assert page.locator('#ly-bar [data-ly="roman"]').count() == 0
                 page.evaluate("MemuMusic.Theme.set('accent', '#1fb2ff')")
@@ -167,16 +215,15 @@ def main():
                     page.locator('[data-update-config="interval_hours"]').select_option('6')
                     page.wait_for_function('''() => fetch('/api/updates/status').then(r => r.json()).then(s => s.config.interval_hours === 6)''')
                     page.locator('[data-stab="library"]').click()
-                    page.evaluate('''path => { window.pywebview = {api: {
-                      choose_folder: async () => path,
-                      choose_files: async () => [path + '\\\\Example - First.wav']
-                    }}; }''', str(work))
-                    page.locator('#imp-browse').click()
-                    assert page.locator('#imp-dir').input_value() == str(work)
-                    with page.expect_response(lambda response: response.url.endswith('/api/music/call') and response.request.post_data_json.get('op') == 'import.files') as imported:
-                        page.locator('#add-files').click()
-                    assert len(imported.value.json()['result']['tracks']) == 1
+                    assert page.locator('#add-files, #imp-browse, .mm-desktop-tools').count() == 0
+                    page.locator('#imp-dir').fill(str(work))
+                    with page.expect_response(lambda response: response.url.endswith('/api/music/call') and response.request.post_data_json.get('op') == 'import.folder') as imported:
+                        page.locator('#imp-go').click()
+                    assert imported.value.ok
                     page.locator('[data-stab="appearance"]').click()
+                    assert page.locator('.mm-ap-languages .mm-ap-card').count() == 2
+                    page.locator('[data-app-language="ru"]').scroll_into_view_if_needed()
+                    page.screenshot(path=str(root / 'build' / 'language-picker.png'))
                     page.locator('[data-app-language="en"]').click()
                 else:
                     page.evaluate("App.setLanguage('en')")

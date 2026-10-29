@@ -70,22 +70,48 @@ const App = (() => {
 })();
 
 window.addEventListener("DOMContentLoaded", () => {
+  const root = document.documentElement;
+  let fullscreenBusy = false;
   const labelWindowButtons = () => {
-    const labels = App.lang === 'ru' ? {minimize:'Свернуть', maximize:'Развернуть или восстановить', close:'Закрыть'} : {minimize:'Minimize', maximize:'Maximize or restore', close:'Close'};
+    const maxed = root.hasAttribute('data-music-maximized');
+    const labels = App.lang === 'ru' ? {minimize:'Свернуть', maximize: maxed ? 'Восстановить' : 'Развернуть', close:'Закрыть'} : {minimize:'Minimize', maximize: maxed ? 'Restore' : 'Maximize', close:'Close'};
     document.querySelectorAll('[data-window]').forEach(button => { button.title = labels[button.dataset.window]; button.setAttribute('aria-label', button.title); });
   };
+  const sync = state => {
+    if (!state) return;
+    root.toggleAttribute('data-music-maximized', !!state.maximized);
+    root.classList.toggle('music-fullscreen', !!state.fullscreen);
+    labelWindowButtons();
+  };
+  async function windowAction(name) {
+    const api = window.pywebview?.api;
+    if (typeof api?.[name] !== 'function') return;
+    try { sync(await api[name]()); }
+    catch (error) { console.warn('[window]', error); }
+  }
+  async function fullscreen() {
+    if (fullscreenBusy) return;
+    fullscreenBusy = true;
+    try { await windowAction('toggle_fullscreen'); }
+    finally { fullscreenBusy = false; }
+  }
   labelWindowButtons(); App.onLanguage(labelWindowButtons);
+  window.addEventListener('music-window-state', event => sync(event.detail));
+  window.addEventListener('pywebviewready', () => windowAction('window_state'));
   document.querySelector('.music-titlebar')?.addEventListener('click', event => {
     const action = event.target.closest('[data-window]')?.dataset.window;
-    const api = window.pywebview?.api;
-    if (action === 'minimize') api?.minimize_window();
-    if (action === 'maximize') api?.toggle_maximize();
-    if (action === 'close') api?.close_window();
+    if (action === 'minimize') windowAction('minimize_window');
+    if (action === 'maximize') windowAction('toggle_maximize');
+    if (action === 'close') windowAction('close_window');
   });
   document.querySelector('.music-titlebar')?.addEventListener('dblclick', event => {
-    if (!event.target.closest('button')) window.pywebview?.api?.toggle_maximize();
+    if (!event.target.closest('button')) windowAction('toggle_maximize');
   });
   document.addEventListener("keydown", event => {
-    if (event.code === "F11" && window.pywebview?.api) { event.preventDefault(); document.documentElement.classList.toggle('music-fullscreen'); window.pywebview.api.toggle_fullscreen(); }
-  });
+    if (!window.pywebview?.api) return;
+    if (event.code === 'F11' || (event.key === 'Escape' && root.classList.contains('music-fullscreen'))) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (!event.repeat) fullscreen();
+    }
+  }, true);
 });

@@ -29,7 +29,7 @@ INSTALLER_NAME = "MemuMusic-Setup.exe"
 CHECKSUM_NAME = INSTALLER_NAME + ".sha256"
 MAX_INSTALLER = 512 * 1024 * 1024
 INTERVALS = (6, 12, 24, 168)
-_VERSION = re.compile(r"^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$")
+_VERSION = re.compile(r"^v?(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$")
 _SHA = re.compile(r"^[a-fA-F0-9]{64}$")
 _ASSET_HOSTS = {"github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com", "github-releases.githubusercontent.com"}
 
@@ -44,7 +44,7 @@ def version_key(value: str) -> tuple:
     match = _VERSION.fullmatch(str(value or ""))
     if not match:
         raise ValueError("invalid version")
-    major, minor, patch = (int(match.group(i)) for i in (1, 2, 3))
+    major, minor, patch = (int(match.group(i) or 0) for i in (1, 2, 3))
     raw = match.group(4)
     if not raw:
         return major, minor, patch, (1, ())
