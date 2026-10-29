@@ -3,8 +3,6 @@
 Лёгкий, крайне красивый и удобный музыкальный плеер на Windows, с большим количеством функционала.
 
 <img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/1cea81b8-9015-4b3c-8533-786d19af41bc" />
-<img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/d3e98789-d520-483e-a523-e0a60cf2b783" />
-
 
 ## Функционал
 
@@ -16,6 +14,8 @@
 - Создавайте свои подборки треков и аристов.
 - Рекомендации: на основе всех ваших треков, получаете самые предпочтительные рекомендации, основанные на данных из YouTube Music.
 - И многое остальное, а ещё больше - в будущем!
+
+<img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/d3e98789-d520-483e-a523-e0a60cf2b783" />
 
 ## Важно!
 
