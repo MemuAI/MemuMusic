@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=MemuMusic
+Comment=Desktop music player / Настольный музыкальный плеер
+Exec=memumusic
+Icon=memumusic
+Terminal=false
+Categories=AudioVideo;Audio;Music;Player;
+Keywords=music;player;музыка;плеер;
+StartupNotify=true
+StartupWMClass=MemuMusic

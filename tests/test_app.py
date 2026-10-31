@@ -79,6 +79,40 @@ class AppTests(unittest.TestCase):
         self.assertEqual(self.client.get(url.split("?")[0] + "?t=wrong").status_code, 403)
         self.assertEqual(self.client.get(url, headers={"Range": "bytes=999999999-"}).status_code, 416)
 
+    def test_stream_range_etag_if_range_and_head(self):
+        url = self.track["stream"]
+        full = self.client.get(url)
+        self.assertEqual(full.status_code, 200)
+        self.assertEqual(full.headers["content-type"], "audio/wav")
+        self.assertEqual(full.headers["accept-ranges"], "bytes")
+        self.assertEqual(int(full.headers["content-length"]), len(full.content))
+        etag = full.headers.get("etag")
+        last_modified = full.headers.get("last-modified")
+        self.assertTrue(etag, "stream must carry an ETag for If-Range seeking")
+        self.assertTrue(last_modified, "stream must carry Last-Modified")
+        # Suffix and open-ended ranges.
+        suffix = self.client.get(url, headers={"Range": "bytes=-100"})
+        self.assertEqual((suffix.status_code, len(suffix.content)), (206, 100))
+        self.assertEqual(suffix.headers["content-range"], f"bytes {len(full.content) - 100}-{len(full.content) - 1}/{len(full.content)}")
+        opened = self.client.get(url, headers={"Range": "bytes=100-"})
+        self.assertEqual(opened.status_code, 206)
+        self.assertEqual(opened.headers["content-range"], f"bytes 100-{len(full.content) - 1}/{len(full.content)}")
+        # A matching If-Range keeps the slice; a stale one gets the file.
+        self.assertEqual(self.client.get(url, headers={"Range": "bytes=0-43", "If-Range": etag}).status_code, 206)
+        self.assertEqual(self.client.get(url, headers={"Range": "bytes=0-43", "If-Range": last_modified}).status_code, 206)
+        stale = self.client.get(url, headers={"Range": "bytes=0-43", "If-Range": '"stale"'})
+        self.assertEqual(stale.status_code, 200)
+        self.assertEqual(len(stale.content), len(full.content))
+        # HEAD honours ranges with headers only; 416 carries Accept-Ranges.
+        head = self.client.head(url, headers={"Range": "bytes=0-43"})
+        self.assertEqual(head.status_code, 206)
+        self.assertEqual(head.content, b"")
+        self.assertEqual(head.headers["content-range"], "bytes 0-43/" + str(len(full.content)))
+        bad = self.client.get(url, headers={"Range": "bytes=999999999-"})
+        self.assertEqual(bad.status_code, 416)
+        self.assertEqual(bad.headers["accept-ranges"], "bytes")
+        self.assertIn("etag", bad.headers)
+
     def test_manual_lyrics_short_text_recovery_and_clear(self):
         tid = self.track["id"]
         self.assertEqual(self.call("lyrics.set", {"id": tid, "text": "f"})["plain"], "f")

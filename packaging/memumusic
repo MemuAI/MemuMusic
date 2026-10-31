@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# MemuMusic launcher for Linux: runs the app in a per-user virtualenv so the
+# system Python stays untouched. The venv is created on first run (network
+# needed once for pip) and refreshed when requirements.txt changes.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$HERE/requirements.txt" ] && [ -d "$HERE/memumusic" ]; then
+    APP_DIR="$HERE"
+else
+    APP_DIR="/usr/lib/memumusic"
+fi
+
+DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+VENV_DIR="$DATA_HOME/memumusic/venv"
+MARKER="$VENV_DIR/.memumusic-requirements.sha256"
+REQ="$APP_DIR/requirements.txt"
+
+need_venv=0
+[ -x "$VENV_DIR/bin/python" ] || need_venv=1
+[ -f "$MARKER" ] || need_venv=1
+if [ "$need_venv" -eq 0 ] && ! cmp -s <(sha256sum "$REQ" | cut -d' ' -f1) "$MARKER"; then
+    need_venv=1
+fi
+
+if [ "$need_venv" -eq 1 ]; then
+    if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+        echo "MemuMusic needs Python 3.10 or newer (python3 --version)." >&2
+        exit 1
+    fi
+    # An existing venv (e.g. created by hand, or with a missing marker) is
+    # refreshed, not recreated: `python3 -m venv` on an existing directory
+    # fails in some setups and would discard a working environment.
+    if [ ! -x "$VENV_DIR/bin/python" ]; then
+        echo "MemuMusic: creating virtualenv in $VENV_DIR ..." >&2
+        # --system-site-packages: the GTK/WebKitGTK bindings (python3-gi)
+        # are system packages; an isolated venv cannot import gi at all,
+        # so without this flag the desktop window could never open.
+        python3 -m venv --system-site-packages "$VENV_DIR" || {
+            echo "MemuMusic: could not create a virtualenv. On Debian/Ubuntu install python3-venv first." >&2
+            exit 1
+        }
+    else
+        echo "MemuMusic: refreshing dependencies in $VENV_DIR ..." >&2
+    fi
+    "$VENV_DIR/bin/pip" install --disable-pip-version-check -r "$REQ"
+    sha256sum "$REQ" | cut -d' ' -f1 > "$MARKER"
+fi
+
+# Venvs created by older launchers are isolated: flip them to system site
+# packages so the system GTK/WebKitGTK bindings (python3-gi) are visible.
+# The venv's own site-packages still take precedence over system ones.
+if [ -f "$VENV_DIR/pyvenv.cfg" ]; then
+    if grep -q '^include-system-site-packages = false' "$VENV_DIR/pyvenv.cfg"; then
+        sed -i 's/^include-system-site-packages = false/include-system-site-packages = true/' "$VENV_DIR/pyvenv.cfg"
+    elif ! grep -q '^include-system-site-packages' "$VENV_DIR/pyvenv.cfg"; then
+        printf 'include-system-site-packages = true\n' >> "$VENV_DIR/pyvenv.cfg"
+    fi
+fi
+
+export PYTHONPATH="$APP_DIR${PYTHONPATH:+:$PYTHONPATH}"
+exec "$VENV_DIR/bin/python" -m memumusic "$@"

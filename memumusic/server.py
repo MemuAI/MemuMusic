@@ -16,9 +16,10 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 
-from . import __version__, storage
+from . import __version__, RELEASE_DATE, storage
 from .music import api
 from .paths import data_dir, web_dir
+from .release_date import read_cached_release_date, resolve_release_date
 from .updater_routes import register_update_routes
 
 log = logging.getLogger(__name__)
@@ -89,7 +90,18 @@ def create_app(session: str | None = None, activate=None, close_window=None) -> 
 
     @app.get("/health")
     async def health():
-        return {"app": "MemuMusic", "version": __version__}
+        # Cached date only: /health must never wait on the network.
+        return {"app": "MemuMusic", "version": __version__,
+                "release_date": read_cached_release_date() or RELEASE_DATE}
+
+    @app.get("/api/version")
+    async def version_info():
+        # Release date from the GitHub release, with a 24h cache and an
+        # offline fallback; resolve_release_date never blocks on the
+        # network in this thread (Settings → Updates reads it).
+        release_date, source = resolve_release_date()
+        return {"version": __version__, "release_date": release_date,
+                "release_date_source": source}
 
     @app.get("/assets/main.js")
     @app.get("/assets/style.css")
@@ -131,7 +143,8 @@ def create_app(session: str | None = None, activate=None, close_window=None) -> 
 
     @app.api_route("/api/music/stream/{track_id}", methods=["GET", "HEAD"])
     async def stream(track_id: str, request: Request, t: str = ""):
-        return await asyncio.to_thread(api.stream_track, track_id, t, request.headers.get("range", ""))
+        return await asyncio.to_thread(api.stream_track, track_id, t, request.headers.get("range", ""),
+                                       request.headers.get("if-range", ""))
 
     @app.api_route("/api/music/online-audio/{token}", methods=["GET", "HEAD"])
     async def online_audio_stream(token: str, request: Request):

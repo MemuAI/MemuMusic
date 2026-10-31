@@ -332,21 +332,40 @@ def error_payload(exc: Exception) -> tuple:
         return {"error": str(exc)}, 400
     return {"error": f"{exc}"[:600] or type(exc).__name__}, 502
 
-def file_response(path: Path, range_header: str, media_type: str, extra_headers: Optional[Dict[str, str]] = None):
-    """A StreamingResponse honouring ``Range: bytes=a-b`` (206), with Accept-Ranges and Content-Length."""
+def file_response(path: Path, range_header: str, media_type: str, extra_headers: Optional[Dict[str, str]] = None,
+                  if_range: str = ""):
+    """A StreamingResponse honouring ``Range: bytes=a-b`` (206), with Accept-Ranges and Content-Length.
+
+    The response also carries a strong ETag (size + mtime) and Last-Modified, so a WebKitGTK/GStreamer
+    player seeking with ``If-Range`` gets the requested range only while the file is unchanged; a stale
+    If-Range falls back to the whole file (200) instead of a wrong slice.
+    """
+    from email.utils import formatdate
     from fastapi.responses import Response, StreamingResponse
-    size = path.stat().st_size
+    stat = path.stat()
+    size = stat.st_size
+    etag = f'"{size}-{stat.st_mtime_ns}"'
+    last_modified = formatdate(stat.st_mtime, usegmt=True)
     start, end = 0, size - 1
     status = 200
     m = re.match(r"^bytes=(\d*)-(\d*)$", (range_header or "").strip())
-    if m and (m.group(1) or m.group(2)):
+    use_range = bool(m and (m.group(1) or m.group(2)))
+    if use_range and if_range:
+        # A conditional range for a changed file must be ignored: the
+        # client revalidates against the full response, not a stale slice.
+        want = if_range.strip().removeprefix("W/")
+        if want not in (etag, last_modified):
+            use_range = False
+    if use_range:
         if m.group(1):
             start = int(m.group(1))
             end = min(int(m.group(2)), size - 1) if m.group(2) else size - 1
         else:
             start = max(0, size - int(m.group(2)))
         if start > end or start >= size:
-            return Response(status_code=416, headers={"Content-Range": f"bytes */{size}"})
+            return Response(status_code=416, headers={"Content-Range": f"bytes */{size}", "Accept-Ranges": "bytes",
+                                                      "ETag": etag, "Last-Modified": last_modified,
+                                                      **(extra_headers or {})})
         status = 206
     length = end - start + 1
 
@@ -362,12 +381,13 @@ def file_response(path: Path, range_header: str, media_type: str, extra_headers:
                 yield data
 
     headers = {"Accept-Ranges": "bytes", "Content-Length": str(length), "Cache-Control": "private, max-age=3600",
+               "ETag": etag, "Last-Modified": last_modified,
                "Cross-Origin-Resource-Policy": "cross-origin", **(extra_headers or {})}
     if status == 206:
         headers["Content-Range"] = f"bytes {start}-{end}/{size}"
     return StreamingResponse(chunks(), status_code=status, media_type=media_type, headers=headers)
 
-def stream_track(track_id: str, token: str, range_header: str = ""):
+def stream_track(track_id: str, token: str, range_header: str = "", if_range: str = ""):
     """Serve a signed local audio stream."""
     from fastapi.responses import JSONResponse
     lib = get_library()
@@ -377,7 +397,8 @@ def stream_track(track_id: str, token: str, range_header: str = ""):
     path = lib.file_path(row) if row else None
     if not path or not path.is_file():
         return JSONResponse({"error": "not found"}, 404, headers=cors_headers())
-    return file_response(path, range_header, MIME.get(path.suffix.lower(), "application/octet-stream"), cors_headers())
+    return file_response(path, range_header, MIME.get(path.suffix.lower(), "application/octet-stream"), cors_headers(),
+                         if_range)
 
 def cover_image(track_id: str, token: str):
     from fastapi.responses import JSONResponse

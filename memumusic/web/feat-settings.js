@@ -29,6 +29,9 @@ function bindCfgControls(host, labels) {
 function renderPlaybackSettings(host) {
   const secs = (v) => (v ? v + " " + t("sec") : t("off"));
   host.innerHTML = `<div class="mm-ap">
+    ${setGroup(t("set.sound"), t("set.sound_hint"), [
+      `<div class="mm-ap-line"><div><b>${esc(t("set.sound_check"))}</b><p id="sound-check-line">${esc(t("set.sound_check_idle"))}</p><p id="sound-check-detail" hidden></p><p id="sound-check-cmd-wrap" hidden><code id="sound-check-cmd"></code></p></div><button type="button" class="mm-btn ghost sm" id="sound-check-go">${icon("wave")}${esc(t("set.sound_check_go"))}</button></div>`,
+    ].join(""))}
     ${setGroup(t("set.flow"), "", [
       setLine(t("set.gapless"), t("set.gapless_hint"), setSwitch("gapless")),
       setLine(t("settings.crossfade"), t("settings.crossfade_hint"), setRange("crossfade", 0, 12, 1, secs)),
@@ -57,6 +60,81 @@ function renderPlaybackSettings(host) {
   };
   host.querySelector("#loud-go").onclick = async () => { const r = await API.soft("library.analyze", {}, null); toast(r ? t("set.analyze_queued", { n: r.queued }) : t("error.tools")); status(); };
   status();
+  soundCheckInit(host);
+}
+
+/* Sound check (Linux/WebKitGTK): the server reports which GStreamer
+   decoders and which audio server are present, and the page itself
+   probes one real track with a muted <audio> element, so a missing
+   mp3/aac decoder, a stalled stream and a blocked autoplay show up as
+   different, actionable results instead of one silent failure. */
+function probeAudio(url) {
+  return new Promise((resolve) => {
+    const a = document.createElement("audio");
+    a.crossOrigin = "anonymous"; a.preload = "auto"; a.muted = true; a.volume = 0;
+    let done = false, stalled = false;
+    const timer = setTimeout(() => finish(false, "set.sound_check_probe_timeout"), 8000);
+    const finish = (ok, key) => {
+      if (done) return; done = true; clearTimeout(timer);
+      try { a.pause(); } catch (e) { }
+      a.removeAttribute("src"); a.load();
+      resolve({ ok, key, stalled });
+    };
+    a.addEventListener("stalled", () => { stalled = true; });
+    a.addEventListener("error", () => {
+      const code = a.error && a.error.code;
+      finish(false, code === 4 ? "set.sound_check_probe_decode"
+        : code === 2 || code === 3 ? "set.sound_check_probe_network" : "set.sound_check_probe_fail");
+    });
+    const tick = () => { if (a.currentTime > 0.05) finish(true, "set.sound_check_probe_ok"); };
+    a.addEventListener("timeupdate", tick);
+    a.addEventListener("playing", tick);
+    a.src = url;
+    const p = a.play();
+    if (p && p.catch) p.catch((e) => finish(false, e && e.name === "NotAllowedError" ? "set.sound_check_probe_blocked" : "set.sound_check_probe_fail"));
+  });
+}
+async function soundCheckInit(host) {
+  const btn = host.querySelector("#sound-check-go");
+  if (!btn) return;
+  btn.onclick = async () => {
+    const line = host.querySelector("#sound-check-line"), detail = host.querySelector("#sound-check-detail"),
+      cmdWrap = host.querySelector("#sound-check-cmd-wrap"), cmd = host.querySelector("#sound-check-cmd");
+    if (!line) return;
+    btn.disabled = true;
+    line.textContent = t("settings.checking");
+    if (detail) { detail.hidden = true; detail.textContent = ""; }
+    if (cmdWrap) cmdWrap.hidden = true;
+    const s = await API.soft("tools.status", {}, null);
+    const audio = s && s.audio;
+    if (!audio) { line.textContent = t("error.tools"); btn.disabled = false; return; }
+    if (!audio.supported) { line.textContent = t("set.sound_check_notsupported"); btn.disabled = false; return; }
+    const parts = [];
+    let backendOk = true;
+    if (!audio.gst_inspect) { backendOk = false; parts.push(t("set.sound_check_no_gst")); }
+    else if (audio.missing && audio.missing.length) { backendOk = false; parts.push(t("set.sound_check_missing", { names: audio.missing.join(", ") })); }
+    if (audio.audio_server === "none") parts.push(t("set.sound_check_no_server"));
+    else if (audio.audio_server && audio.audio_server !== "unknown") parts.push(t("set.sound_check_server", { server: audio.audio_server }));
+    let probe = null, ext = "";
+    try {
+      const lib = await API.soft("library.list", { limit: 50 }, null);
+      const tracks = (lib && lib.tracks) || [];
+      const pick = tracks.find((x) => ["mp3", "m4a", "aac", "flac", "ogg", "opus"].includes(String(x.file_ext || "").toLowerCase())) || tracks[0];
+      if (pick) {
+        ext = String(pick.file_ext || "");
+        const url = await API.call("stream_url", { id: pick.id });
+        probe = await probeAudio(url);
+      }
+    } catch (e) { probe = { ok: false, key: "set.sound_check_probe_fail", stalled: false }; }
+    if (probe) parts.push(t(probe.key, { ext }));
+    else parts.push(t("set.sound_check_no_track"));
+    if (detail) { detail.textContent = parts.join(" · "); detail.hidden = false; }
+    if (!backendOk && audio.command && cmd && cmdWrap) { cmd.textContent = audio.command; cmdWrap.hidden = false; }
+    line.textContent = probe && !probe.ok ? t("set.sound_check_bad")
+      : !backendOk ? t("set.sound_check_ok_partial")
+      : probe ? t("set.sound_check_ok") : t("set.sound_check_bad");
+    btn.disabled = false;
+  };
 }
 
 function renderLibrarySettings(host) {

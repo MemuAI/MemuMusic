@@ -2,7 +2,7 @@
   const words = {
     ru: {
       tab: 'Обновления', title: 'Обновления приложения', hint: 'Проверка новых версий, загрузка и установка.',
-      current: 'Текущая версия', check: 'Проверить', checking: 'Проверяем обновления…',
+      current: 'Текущая версия', released: 'Выпуск', check: 'Проверить', checking: 'Проверяем обновления…',
       download: 'Скачать обновление', downloading: 'Скачиваем и проверяем установщик…',
       ready: 'Обновление готово к установке', available: 'Доступна новая версия', latest: 'Установлена последняя доступная версия',
       idle: 'Проверка ещё не выполнялась', failed: 'Не удалось обновить приложение', retry: 'Попробовать снова',
@@ -29,7 +29,7 @@
     },
     en: {
       tab: 'Updates', title: 'Application updates', hint: 'Check, download and install new versions.',
-      current: 'Current version', check: 'Check for updates', checking: 'Checking for updates…',
+      current: 'Current version', released: 'Released', check: 'Check for updates', checking: 'Checking for updates…',
       download: 'Download update', downloading: 'Downloading and verifying the installer…',
       ready: 'Update is ready to install', available: 'A new version is available', latest: 'You have the latest available version',
       idle: 'No check has been performed yet', failed: 'Could not update the application', retry: 'Try again',
@@ -91,7 +91,7 @@
   }
 
   function render(host) {
-    let state = null, drawKey = '', pollTimer = 0;
+    let state = null, drawKey = '', pollTimer = 0, about = null;
     host.innerHTML = '<div class="mm-ap mm-updates" aria-live="polite"></div>';
     const root = host.firstElementChild;
     const line = (name, hint, control) => `<div class="mm-ap-line"><div><b>${esc(name)}</b>${hint ? `<p>${esc(hint)}</p>` : ''}</div>${control}</div>`;
@@ -101,7 +101,7 @@
     function draw(next) {
       state = next; badge(next);
       const cfg = next.config || {}, latest = next.latest || null, busy = next.busy || ['checking', 'downloading', 'installing'].includes(next.phase);
-      const key = JSON.stringify({ ...next, progress: 0, total: next.phase === 'downloading' ? 0 : next.total });
+      const key = JSON.stringify({ ...next, release_date: about?.release_date || '', progress: 0, total: next.phase === 'downloading' ? 0 : next.total });
       if (drawKey === key) {
         const bar = root.querySelector('progress');
         if (bar) { bar.max = next.total || 1; bar.value = next.progress || 0; }
@@ -112,6 +112,9 @@
       drawKey = key;
       const statusKey = ({ idle: 'idle', checking: 'checking', available: 'available', downloading: 'downloading', ready: 'ready', installing: 'applying', up_to_date: 'latest', error: 'failed' })[next.phase] || 'idle';
       const last = next.last_checked ? new Date(next.last_checked * 1000).toLocaleString(App.lang === 'ru' ? 'ru-RU' : 'en-US') : L('never');
+      const rawDate = about?.release_date || '';
+      const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? new Date(`${rawDate}T12:00:00`) : null;
+      const released = parsedDate && !isNaN(parsedDate) ? parsedDate.toLocaleDateString(App.lang === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
       const details = next.phase === 'error' ? `<p class="mm-update-error">${esc(L(next.error || 'invalid_response'))}</p>` : '';
       const progress = next.phase === 'downloading' ? `<div class="mm-update-progress"><progress max="${next.total || 1}" value="${next.progress || 0}"></progress><small data-update-bytes>${next.total ? `${(next.progress / 1048576).toFixed(1)} / ${(next.total / 1048576).toFixed(1)} MB` : ''}</small></div>` : '';
       const controls = `<div class="mm-update-actions"><button type="button" class="mm-btn ghost sm" data-update-action="check" ${busy ? 'disabled' : ''}>${icon('refresh')}${esc(L(next.phase === 'error' ? 'retry' : 'check'))}</button>
@@ -119,7 +122,7 @@
         ${next.phase === 'ready' ? `<button type="button" class="mm-btn solid sm" data-update-action="install" ${next.can_install && !busy ? '' : 'disabled'}>${icon('download')}${esc(L(next.installed ? 'install' : 'installPortable'))}</button>` : ''}
         ${latest ? `<button type="button" class="mm-btn ghost sm" data-update-action="release">${esc(L('release'))}</button>` : ''}</div>`;
       const hint = next.phase === 'ready' ? L(next.can_install ? next.installed ? 'installHint' : 'portableHint' : 'unsupported') : '';
-      root.innerHTML = group(L('title'), L('hint'), `<div class="mm-update-card"><div class="mm-update-icon">${icon('refresh')}</div><div class="mm-update-copy"><b>${esc(L(statusKey))}${latest ? ' · ' + esc(latest.version) : ''}</b><p>${esc(L('current'))}: ${esc(next.current_version || '')}</p>${details}${progress}${hint ? `<p>${esc(hint)}</p>` : ''}${controls}<small>${esc(L('last'))}: ${esc(last)}</small></div></div>`)
+      root.innerHTML = group(L('title'), L('hint'), `<div class="mm-update-card"><div class="mm-update-icon">${icon('refresh')}</div><div class="mm-update-copy"><b>${esc(L(statusKey))}${latest ? ' · ' + esc(latest.version) : ''}</b><p>${esc(L('current'))}: ${esc(next.current_version || '')}${released ? ` · ${esc(L('released'))} ${esc(released)}` : ''}</p>${details}${progress}${hint ? `<p>${esc(hint)}</p>` : ''}${controls}<small>${esc(L('last'))}: ${esc(last)}</small></div></div>`)
         + group(L('automatic'), '', line(L('automatic'), L('autoHint'), toggle('enabled', cfg.enabled))
           + line(L('autoDownload'), L('downloadHint'), toggle('auto_download', cfg.auto_download))
           + line(L('frequency'), '', `<select class="mm-input mm-update-select" data-update-config="interval_hours">${[6, 12, 24, 168].map(n => `<option value="${n}" ${cfg.interval_hours === n ? 'selected' : ''}>${esc(L('h' + n))}</option>`).join('')}</select>`)
@@ -130,6 +133,14 @@
       clearTimeout(pollTimer);
       if (!host.isConnected) return;
       try {
+        if (!about || about.release_date_source === 'fallback') {
+          // Пока дата — офлайн-фолбэк, переспрашиваем: фоновая загрузка
+          // с GitHub могла уже записать дату в кэш.
+          try {
+            const info = await fetch('/api/version');
+            about = info.ok ? await info.json() : {};
+          } catch (_) { about = {}; }
+        }
         const next = await request('status');
         if (!host.isConnected) return;
         draw(next);

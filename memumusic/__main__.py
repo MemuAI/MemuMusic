@@ -11,6 +11,7 @@ import time
 def main():
     parser = argparse.ArgumentParser(prog="MemuMusic", description="Independent desktop music player")
     parser.add_argument("--serve", action="store_true", help="Run the local UI without opening a desktop window")
+    parser.add_argument("--browser", action="store_true", help="Open the local UI in the system browser instead of a desktop window")
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--data-dir", type=Path)
     parser.add_argument("--ready-file", type=Path, help=argparse.SUPPRESS)
@@ -42,7 +43,7 @@ def main():
                 server.stop()
         else:
             from .desktop import run
-            run()
+            run(browser=args.browser)
     except Exception as exc:
         logging.exception("Application failed")
         if os.name == "nt" and not args.serve:

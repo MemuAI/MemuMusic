@@ -96,6 +96,92 @@ def _run_version(cmd: List[str]) -> str:
     _VERSION_CACHE[key] = (stamp, version)
     return version
 
+# GStreamer elements WebKitGTK needs to decode the formats MemuMusic
+# serves (mp3/m4a/aac come from downloads; wav/ogg/flac/opus are covered
+# by the base/good sets WebKitGTK already depends on). Sinks are the
+# output side: pulsesink (PulseAudio / PipeWire's Pulse emulation) and
+# pipewiresink (native PipeWire).
+_AUDIO_ELEMENTS = {
+    "playbin": ("playbin", "base"),
+    "vorbisdec": ("vorbisdec", "base"),
+    "opusdec": ("opusdec", "good"),
+    "flacdec": ("flacdec", "good"),
+    "mpg123audiodec": ("mpg123audiodec", "ugly"),
+    "avdec_mp3": ("avdec_mp3", "libav"),
+    "avdec_aac": ("avdec_aac", "libav"),
+    "faad": ("faad", "bad"),
+    "pulsesink": ("pulsesink", "good"),
+    "pipewiresink": ("pipewiresink", "pipewire"),
+    "autoaudiosink": ("autoaudiosink", "base"),
+}
+_AUDIO_CODEC_PACKAGES = ("gstreamer1.0-plugins-bad", "gstreamer1.0-plugins-ugly",
+                         "gstreamer1.0-libav", "gstreamer1.0-pipewire")
+_AUDIO_CACHE: Dict[str, Any] = {"at": 0.0, "value": None}
+
+
+def _gst_elements() -> Dict[str, bool]:
+    """``gst-inspect-1.0`` presence per element, or ``None`` values when the
+    inspector itself is missing (the elements cannot be checked then)."""
+    found = shutil.which("gst-inspect-1.0")
+    if not found:
+        return {name: None for name in _AUDIO_ELEMENTS}
+    out: Dict[str, bool] = {}
+    for name in _AUDIO_ELEMENTS:
+        try:
+            result = subprocess.run([found, name], capture_output=True, timeout=10,
+                                    text=True, encoding="utf-8", errors="replace", **popen_kwargs())
+            out[name] = result.returncode == 0 and "No such element" not in (result.stdout + result.stderr)
+        except (OSError, subprocess.SubprocessError):
+            out[name] = False
+    return out
+
+
+def _audio_server() -> str:
+    """"pipewire", "pulseaudio", "none" or "unknown" on Linux, from the
+    user runtime sockets first (no daemon is started by probing)."""
+    if not sys.platform.startswith("linux"):
+        return "unknown"
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    has_pipewire = Path(runtime, "pipewire-0").exists()
+    has_pulse = Path(runtime, "pulse", "native").exists() or Path(runtime, "pulse").is_dir()
+    if has_pipewire and has_pulse:
+        return "pipewire"
+    if has_pipewire:
+        return "pipewire"
+    if has_pulse:
+        return "pulseaudio"
+    return "none"
+
+
+def audio_status() -> Dict[str, Any]:
+    """What the Linux audio stack looks like for the WebKitGTK window.
+
+    On a stock Debian/Ubuntu install WebKitGTK pulls only the base/good
+    GStreamer sets, so mp3 (ugly/libav) and m4a/aac (libav) have no
+    decoder and ``<audio>`` fails with MEDIA_ERR_SRC_NOT_SUPPORTED while
+    wav/ogg keep playing. The UI turns this into a sound check with the
+    exact ``apt`` command; on non-Linux systems the check is not
+    applicable and ``supported`` is False.
+    """
+    if not sys.platform.startswith("linux"):
+        return {"supported": False, "platform": sys.platform, "elements": {},
+                "missing": [], "audio_server": "unknown", "command": ""}
+    now = time.time()
+    if _AUDIO_CACHE["value"] is not None and now - _AUDIO_CACHE["at"] < 60:
+        return dict(_AUDIO_CACHE["value"])
+    elements = _gst_elements()
+    missing = [name for name, ok in elements.items()
+               if ok is False and name in ("mpg123audiodec", "avdec_mp3", "avdec_aac", "faad")]
+    value = {"supported": True, "platform": sys.platform,
+             "gst_inspect": shutil.which("gst-inspect-1.0") or "",
+             "elements": elements, "missing": missing,
+             "audio_server": _audio_server(),
+             "command": ("sudo apt-get install -y " + " ".join(_AUDIO_CODEC_PACKAGES))
+                        if shutil.which("apt-get") else ""}
+    _AUDIO_CACHE.update(at=now, value=value)
+    return dict(value)
+
+
 def status() -> Dict[str, Any]:
     binary = ytdlp_binary()
     module = python_module()
@@ -112,6 +198,7 @@ def status() -> Dict[str, Any]:
     ff_version = _run_version([ff, "-version"]) if ff else ""
     return {"ytdlp": ytdlp, "ffmpeg": {"ok": bool(ff_version), "version": ff_version.replace("ffmpeg version ", "").split(" ")[0],
                                        "path": ff or ""},
+            "audio": audio_status(),
             "update": dict(UPDATE_STATE)}
 
 UPDATE_STATE: Dict[str, Any] = {"status": "idle", "error": "", "at": 0}

@@ -86,6 +86,8 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(module.version_key('1.0'), module.version_key('1.0.0'))
         self.assertLess(module.version_key('1.0'), module.version_key('1.0.1'))
         self.assertEqual(module.version_key('v1.0'), module.version_key('1.0.0'))
+        self.assertLess(module.version_key('1.0'), module.version_key('1.1'))
+        self.assertLess(module.version_key('1.0.0'), module.version_key('1.1'))
         self.assertLess(module.version_key('1.0.0-preview.9'), module.version_key('1.0.0-preview.10'))
         self.assertLess(module.version_key('1.0.0-preview.10'), module.version_key('1.0.0'))
         self.assertLess(module.version_key('1.0.0'), module.version_key('1.0.1-preview.1'))
@@ -95,6 +97,10 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(module.select_release([self.release], '1.0.0-preview.2', 'preview')['version'], '1.0.0-preview.3')
         stable, _ = release('v1.0.0', prerelease=False)
         self.assertEqual(module.select_release([self.release, stable], '1.0.0-preview.2', 'preview')['version'], '1.0.0')
+        upgrade, _ = release('v1.1', prerelease=False)
+        self.assertEqual(module.select_release([upgrade], '1.0', 'stable')['version'], '1.1')
+        self.assertIsNone(module.select_release([upgrade], '1.1', 'stable'))
+        self.assertIsNone(module.select_release([upgrade], '1.1.0', 'stable'))
 
     def test_check_download_restart_and_reverify(self):
         self.ready()
